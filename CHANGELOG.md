@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0 (2026-11-18)
+- Frontier effort levels (low / medium / high / xhigh / max) from AA index per effort: Fable 5.2, Opus 5.5, GPT-6 Astra, Gemini 4 Carbon
+- Local reasoning mode (low / medium / high), estimated profile, per-model measured `modes` override
+- Effort mapping table in the twin panel: match % grid, cheapest equivalent mode, time per answer, reverse mapping
+- Architecture filter (MoE / dense), Arch column, architecture in twin facts
+- Help topic "Effort levels & MoE"
+
 ## 1.0.5 (2026-11-18)
 - README rewritten with dashboard screenshot (docs/screenshot.png), features, config and port tables
 - Fix: a free --port given on the command line was saved to config.json; only a port chosen at the busy-port prompt is saved now

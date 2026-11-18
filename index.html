@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="frontiertwin-version" content="1.0.5">
+<meta name="frontiertwin-version" content="1.1.0">
 <title>FrontierTwin</title>
 <meta name="author" content="Subramoniam AB (SAB)">
 <!-- FrontierTwin · Developer: Subramoniam AB (SAB) -->
@@ -109,6 +109,18 @@ dialog#help::backdrop { background: rgb(15 20 25 / 0.45) }
 .mcard { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 4px; align-content: start }
 .mcard h4 { margin: 0; font-size: 13px }
 .mcard p { margin: 0; font-size: 13px; color: var(--muted) }
+/* effort selector + map */
+.effort { display: grid; gap: 6px }
+.effort .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center }
+.etab { border: 1px solid var(--line); background: transparent; padding: 3px 10px; border-radius: 6px; font-size: 12px }
+.etab[aria-pressed="true"] { background: var(--frontier); color: #fff; border-color: var(--frontier) }
+.emap { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 14px }
+.emap table td, .emap table th { text-align: center }
+.emap table td.lead, .emap table th.lead { text-align: left; text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--ink) }
+.emap td.pick { box-shadow: inset 0 0 0 2px var(--ink); font-weight: 600 }
+.emap .eqs { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px }
+.arch { font-size: 11px; padding: 1px 7px; border-radius: 999px; white-space: nowrap; background: var(--chip) }
+.arch.moe { background: var(--frontier-soft); color: var(--frontier) }
 /* credit */
 .credit { display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--line); padding-top: 12px; flex-wrap: wrap }
 .credit img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line) }
@@ -284,6 +296,7 @@ dialog.sdlg::backdrop { background: rgb(15 20 25 / 0.45) }
         <div><h3>1 · Frontier model you pay for</h3></div>
         <div class="vendors" id="vendors"></div>
         <div class="targets" id="targets"></div>
+        <div class="effort" id="effort"></div>
 
         <div><h3>2 · What matters to you</h3></div>
         <div class="presets" id="presets"></div>
@@ -299,6 +312,10 @@ dialog.sdlg::backdrop { background: rgb(15 20 25 / 0.45) }
             <select id="fCtx"><option value="0">Any</option><option value="128">128K</option><option value="256">256K</option><option value="1000">1M</option></select></label>
           <label for="fVer">Local versions
             <select id="fVer"><option value="all">All versions</option><option value="latest">Latest of each family</option></select></label>
+          <label for="fArch">Architecture
+            <select id="fArch"><option value="">All</option><option value="MoE">MoE only</option><option value="Dense">Dense only</option></select></label>
+          <label for="fMode">Local reasoning mode
+            <select id="fMode"><option value="high">High (thinking)</option><option value="medium">Medium</option><option value="low">Low / no thinking</option></select></label>
           <label for="fFam">Local family
             <select id="fFam"><option value="">All families</option></select></label>
           <label for="fTps">Min speed (tok/s)
@@ -378,7 +395,7 @@ dialog.sdlg::backdrop { background: rgb(15 20 25 / 0.45) }
     <div class="credit">
       <img alt="Subramoniam AB" src="data:image/jpeg;base64,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">
       <div class="who"><strong>Subramoniam AB (SAB)</strong><span>Developer</span></div>
-      <span class="small" id="buildInfo">FrontierTwin v1.0.5 · self-hosted · <span id="appVer"></span></span>
+      <span class="small" id="buildInfo">FrontierTwin v1.1.0 · self-hosted · <span id="appVer"></span></span>
     </div>
   </footer>
 </div>
@@ -400,6 +417,7 @@ dialog.sdlg::backdrop { background: rgb(15 20 25 / 0.45) }
           <button data-t="h-weights">Priorities &amp; sliders</button>
           <button data-t="h-results">Reading the results</button>
           <button data-t="h-matrix">Match matrix</button>
+          <button data-t="h-effort">Effort levels &amp; MoE</button>
           <button data-t="h-deploy">Deploy on DGX Spark</button>
           <button data-t="h-refresh">Refresh &amp; live updates</button>
           <button data-t="h-install">Install &amp; upgrade</button>
@@ -465,6 +483,32 @@ dialog.sdlg::backdrop { background: rgb(15 20 25 / 0.45) }
               <li>Click any cell to open that pair in the twin panel.</li>
             </ul>
             <p><strong>How to use it:</strong> scan down a column to see which paid models one local model can stand in for; scan across a row to compare local options for one paid model. Bottom rows (small paid models) usually show the highest scores, meaning those are the easiest to replace locally.</p>
+          </section>
+
+          <section id="h-effort" hidden>
+            <h3>Effort levels &amp; MoE</h3>
+            <h4>Frontier effort level</h4>
+            <p>Paid models can run at different reasoning efforts (low, medium, high, xhigh, max). Lower effort is cheaper and faster but scores lower. Under the model list, <strong>Effort level</strong> lists the levels published for that model.</p>
+            <ul>
+              <li>Capability scores are at the model's top published effort. A lower effort scales them by <code>AA index(effort) ÷ AA index(top)</code>. Example: Opus 5.5 medium = 48.2 ÷ 59.1 = 82% of max.</li>
+              <li>Effort moves reasoning-heavy capabilities fully (coding, agents, reasoning, math), vision by half, knowledge by 30%.</li>
+              <li>Models with one published level show "one published level"; the selector has no effect on them.</li>
+              <li>The choice applies to the twin panel, ranking and matrix (rows that have that level).</li>
+            </ul>
+            <h4>Local reasoning mode</h4>
+            <p><strong>Constraints → Local reasoning mode</strong>: High (thinking), Medium, Low / no thinking. Most open models (Qwen, gpt-oss, GLM, Nemotron, Gemma, DeepSeek) let you set this.</p>
+            <ul>
+              <li>Published local scores are treated as High. Medium ×0.92 and Low ×0.82 are an <em>estimated</em> profile until measured on your Spark (a model's own <code>modes</code> data replaces it).</li>
+              <li>Thinking tokens per answer (estimated): low 800, medium 3,000, high 8,000. Time per answer = (thinking + 500 answer tokens) ÷ tok/s.</li>
+            </ul>
+            <h4>Effort mapping table (twin panel)</h4>
+            <p>Rows = frontier effort levels, columns = local modes, cells = match %. The outlined cell is the cheapest local mode that reaches the best match for that row, giving lines such as "Opus 5.5 low ≈ Qwen3.8 27B medium". "Reverse" names the frontier effort the local model at High comes closest to on overall score.</p>
+            <h4>MoE vs dense</h4>
+            <ul>
+              <li><strong>MoE</strong> (mixture of experts, e.g. 35B / 3B active): all experts must fit in memory (total params) but only active params are read per token, so it is fast.</li>
+              <li><strong>Dense</strong> (e.g. 27B): every parameter is read per token; slower, but more quality per GB of memory, leaving room for long context or a second model.</li>
+              <li><strong>Constraints → Architecture</strong> filters to MoE only or Dense only. The ranking table has an Arch column; the twin panel shows architecture.</li>
+            </ul>
           </section>
 
           <section id="h-deploy" hidden>
@@ -614,7 +658,7 @@ const STALE_DAYS = 10;
 const LOAD_TIMEOUT_MS = 10000;
 
 const state = { models: [], meta: null, vendor: null, targetId: null, twinId: null,
-  weights: { ...PRESETS.Balanced }, preset: "Balanced", famPick: {} };
+  weights: { ...PRESETS.Balanced }, preset: "Balanced", famPick: {}, effort: "top", localMode: "high" };
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, attrs = {}, kids = []) => {
@@ -652,7 +696,62 @@ function localCap(F, L, key) {
   if (fo == null || lo == null || fc == null) { return null; }
   return { v: lo * q * (fc / fo), kind: "imputed" };
 }
-function match(F, L, weights) {
+/* ---------- effort levels ----------
+   Frontier: capability scores are at the model's top published effort.
+   A lower effort scales them by AA index(effort) / AA index(top).
+   Local: reasoning-mode factors come from the model's measured "modes",
+   else from the estimated profile in meta.localEffortProfile.
+   Effort moves reasoning-heavy capabilities more than knowledge.          */
+const EFFORT_ORDER = ["max", "xhigh", "high", "medium", "low"];
+const CAP_EFFORT_SENS = { coding: 1, agentic: 1, reasoning: 1, math: 1, multimodal: 0.5, knowledge: 0.3 };
+const OVERALL_EFFORT_SENS = 0.8;
+const ANSWER_TOKENS = 500;                       // visible answer length used for time per answer
+const DEFAULT_LOCAL_MODES = {
+  low:    { label: "Low / no thinking", factor: 0.82, tokens: 800 },
+  medium: { label: "Medium",            factor: 0.92, tokens: 3000 },
+  high:   { label: "High (thinking)",   factor: 1.0,  tokens: 8000 },
+};
+const LOCAL_MODE_ORDER = ["low", "medium", "high"];
+
+const localModes = () => state.meta?.localEffortProfile || DEFAULT_LOCAL_MODES;
+const effortLevels = (F) => EFFORT_ORDER.filter(e => F.efforts?.[e] != null);
+function effFactor(F, level) {
+  const lv = effortLevels(F);
+  if (!lv.length || level === "top" || F.efforts[level] == null) { return 1; }
+  return F.efforts[level] / F.efforts[lv[0]];
+}
+function modeInfo(L, mode) {
+  const own = L.modes?.[mode];
+  const base = localModes()[mode] || DEFAULT_LOCAL_MODES[mode];
+  return { ...base, ...(own || {}), measured: !!own };
+}
+function scaleScores(m, f) {
+  if (f === 1) { return m; }
+  const scores = {};
+  for (const [k, v] of Object.entries(m.scores || {})) {
+    const sens = k === "overall" ? OVERALL_EFFORT_SENS : (CAP_EFFORT_SENS[k] ?? 1);
+    scores[k] = v * (1 - sens * (1 - f));
+  }
+  return { ...m, scores };
+}
+const effLabel = (F, level) => (level === "top" || F.efforts?.[level] == null) ? (effortLevels(F)[0] || "default") : level;
+function archOf(m) {
+  if (!m.paramsTotal || !m.paramsActive) { return null; }
+  return m.paramsActive < m.paramsTotal ? "MoE" : "Dense";
+}
+function archText(m) {
+  const a = archOf(m);
+  if (!a) { return "—"; }
+  return a === "MoE" ? `MoE ${m.paramsTotal}B / ${m.paramsActive}B active` : `Dense ${m.paramsTotal}B`;
+}
+function secsPerAnswer(L, mode) {
+  const t = tpsOf(L);
+  return t ? (modeInfo(L, mode).tokens + ANSWER_TOKENS) / t : null;
+}
+
+function match(F, L, weights, effort = state.effort, mode = state.localMode) {
+  F = scaleScores(F, effFactor(F, effort));
+  L = scaleScores(L, modeInfo(L, mode).factor);
   let sum = 0, wsum = 0;
   const rows = [];
   for (const c of CAPS) {
@@ -712,6 +811,7 @@ function candidates() {
     .filter(m => !latestOnly || newest.has(m.id))
     .filter(m => !$("fPlaybook").checked || (m.playbooks || []).length)
     .filter(m => !fam || famOf(m) === fam)
+    .filter(m => !$("fArch").value || archOf(m) === $("fArch").value)
     .filter(m => tight || m.spark?.fit !== "tight")
     .filter(m => !vis || m.vision)
     .filter(m => (m.contextK || 0) >= ctx)
@@ -838,10 +938,10 @@ function renderHero() {
   const L = pick.L, v = verdictOf(pick.pct), isTop = pick === list[0];
 
   const vs = el("div", { class: "vs" }, [
-    el("div", { class: "side f" }, [el("div", { class: "label", text: "You pay for" }), el("div", { class: "name", text: F.name }),
+    el("div", { class: "side f" }, [el("div", { class: "label", text: "You pay for" }), el("div", { class: "name", text: F.name }), el("div", { class: "small", text: `Effort: ${effLabel(F, state.effort)}${effortLevels(F).length ? "" : " (only published level)"}` }),
       el("div", { class: "small muted", text: `${F.vendor} · ${F.contextK >= 1000 ? (F.contextK / 1000).toFixed(F.contextK % 1000 ? 2 : 0) + "M" : F.contextK + "K"} context · ${F.price || "—"}` })]),
     el("div", { class: "gauge arrow", html: gauge(pick.pct, v.cls) }),
-    el("div", { class: "side l" }, [el("div", { class: "label", text: isTop ? "Closest local twin" : "Selected local model" }), el("div", { class: "name", text: L.name }),
+    el("div", { class: "side l" }, [el("div", { class: "label", text: isTop ? "Closest local twin" : "Selected local model" }), el("div", { class: "name", text: L.name }), el("div", { class: "small", text: `Mode: ${modeInfo(L, state.localMode).label}${modeInfo(L, state.localMode).measured ? "" : " (est.)"} · ${archText(L)}` }),
       el("div", { class: "small muted", text: `${L.vendor} · ${L.paramsTotal ?? "?"}B${L.paramsActive && L.paramsActive !== L.paramsTotal ? " / " + L.paramsActive + "B active" : " dense"} · open weights` })]),
   ]);
 
@@ -870,6 +970,7 @@ function renderHero() {
   const tps = tpsOf(L);
   const facts = el("div", { class: "facts" }, [
     ["Fit", sp.fit === "tight" ? "Tight" : "Comfortable"],
+    ["Architecture", archText(L)],
     ["Quantization", sp.quant || "—"],
     ["Memory", sp.memGB ? `~${fmt(sp.memGB)} GB of 119` : "—"],
     ["Decode speed", tps ? `${fmt(tps, 1)} tok/s${sp.tpsSource === "estimated" ? " (est.)" : ""}` : "—"],
@@ -896,7 +997,7 @@ function renderHero() {
   const twinVer = sibs.length > 1 ? el("div", { class: "twinver" }, [el("span", { class: "muted", text: famOf(L) + " versions: " }),
     ...sibs.map(m => el("button", { class: "preset", "aria-pressed": String(m.id === L.id),
       text: `v${m.version || m.name} ${fmt(match(F, m, state.weights).pct)}%`, onclick: () => { state.twinId = m.id; renderResults(); } }))]) : null;
-  hero.replaceChildren(...[vs, head, el("h3", { text: "Capability by capability" }), bars, legend, facts, notes, twinVer, alts, deployPanel(L)].filter(Boolean));
+  hero.replaceChildren(...[vs, head, el("h3", { text: "Capability by capability" }), bars, legend, facts, notes, twinVer, alts, effortMap(F, L), deployPanel(L)].filter(Boolean));
 }
 
 /* ---------- deploy commands (adapted from NVIDIA DGX Spark playbooks) ---------- */
@@ -1092,14 +1193,80 @@ function deployPanel(m) {
   return box;
 }
 
+/* ---------- effort selector + map ---------- */
+function renderEffort() {
+  const F = state.models.find(m => m.id === state.targetId);
+  const box = $("effort");
+  if (!F) { box.replaceChildren(); return; }
+  const lv = effortLevels(F);
+  const head = el("h3", { text: "Effort level" });
+  if (!lv.length) {
+    box.replaceChildren(head, el("p", { class: "small muted", style: "margin:0", text: `${F.name}: one published level. Scores are at its top setting.` }));
+    return;
+  }
+  const btns = ["top", ...lv.slice(1)].map(e => {
+    const label = e === "top" ? `${lv[0]} (top)` : e;
+    const on = state.effort === e || (e === "top" && (state.effort === "top" || F.efforts[state.effort] == null || state.effort === lv[0]));
+    return el("button", { class: "etab", "aria-pressed": String(on), text: label,
+      title: `AA index ${F.efforts[e === "top" ? lv[0] : e]}`, onclick: () => { state.effort = e === lv[0] ? "top" : e; renderEffort(); renderResults(); } });
+  });
+  box.replaceChildren(head, el("div", { class: "row" }, btns),
+    el("p", { class: "small muted", style: "margin:0", text: `Lower effort = cheaper, faster, weaker. ${F.name} ${effLabel(F, state.effort)}: ${fmt(effFactor(F, state.effort) * 100)}% of top-effort score (AA index).` }));
+}
+
+function effortMap(F, L) {
+  const lv = effortLevels(F);
+  const levels = lv.length ? lv : ["top"];
+  const modes = LOCAL_MODE_ORDER;
+  const grid = levels.map(e => modes.map(m => match(F, L, state.weights, e, m).pct));
+
+  // Cheapest local mode that gets within 0.5 pt of the best for that frontier effort
+  const picks = grid.map(row => { const best = Math.max(...row); return row.findIndex(v => v >= best - 0.5); });
+  const est = modes.some(m => !modeInfo(L, m).measured);
+
+  const thead = el("thead", {}, el("tr", {}, [el("th", { class: "lead", text: `${F.name} effort ↓ / ${L.name} mode →` }),
+    ...modes.map(m => el("th", { text: modeInfo(L, m).label })) ]));
+  const body = el("tbody", {}, levels.map((e, i) => el("tr", {}, [
+    el("th", { class: "lead", text: e === "top" ? "default" : e + (lv.length && F.efforts[e] != null ? ` (AA ${F.efforts[e]})` : "") }),
+    ...grid[i].map((v, j) => el("td", { class: j === picks[i] ? "pick" : "", style: heat(v), title: `${F.name} ${e} vs ${L.name} ${modes[j]}: ${fmt(v)}%`, text: fmt(v) + "%" })),
+  ])));
+  const cost = el("tr", {}, [el("th", { class: "lead", text: "Time per answer" }),
+    ...modes.map(m => { const t = secsPerAnswer(L, m); return el("td", { class: "small", text: t ? `~${fmt(t)} s` : "—" }); })]);
+  body.append(cost);
+
+  // Equivalence lines
+  const eqs = levels.map((e, i) => {
+    const m = modes[picks[i]], v = grid[i][picks[i]], t = secsPerAnswer(L, m);
+    return el("li", { text: `${F.name} ${e === "top" ? "" : e + " "}≈ ${L.name} ${modeInfo(L, m).label.toLowerCase()} · ${fmt(v)}% match${t ? ` · ~${fmt(t)} s per answer` : ""}` });
+  });
+
+  // Inverse: which frontier effort the local model's top mode is closest to (overall score)
+  let inv = null;
+  if (lv.length) {
+    const lo = overallOf(scaleScores(L, modeInfo(L, "high").factor)) * quantFactor(L);
+    const near = lv.map(e => ({ e, d: Math.abs(overallOf(scaleScores(F, effFactor(F, e))) - lo), fo: overallOf(scaleScores(F, effFactor(F, e))) }))
+      .sort((a, b) => a.d - b.d)[0];
+    inv = el("li", { html: `<strong>Reverse:</strong> ${L.name} high performs closest to ${F.name} <strong>${near.e}</strong> (overall ${fmt(near.fo)} vs ${fmt(lo)}).` });
+  }
+
+  return el("div", { class: "emap" }, [
+    el("h3", { text: "Effort mapping" }),
+    el("p", { class: "small muted", style: "margin:0", text: "Match % for every frontier effort level against every local reasoning mode, using your sliders. Outlined = cheapest local mode that reaches the best match for that row." }),
+    el("div", { class: "scroll" }, el("table", {}, [thead, body])),
+    el("ul", { class: "eqs" }, [...eqs, inv].filter(Boolean)),
+    el("p", { class: "small muted", style: "margin:0", text: (lv.length ? "Frontier levels: AA Intelligence Index per effort. " : `${F.name} publishes one level only. `) +
+      (est ? "Local modes: estimated profile (low ×0.82, medium ×0.92, high = published score; thinking tokens 800 / 3,000 / 8,000) until measured on your Spark." : "Local modes: measured.") }),
+  ]);
+}
+
 /* ---------- render: table ---------- */
 function renderRank() {
   const F = state.models.find(m => m.id === state.targetId);
   if (!F) { $("rank").replaceChildren(); return; }
   $("rankTitle").textContent = `All Spark-ready models vs ${F.name}`;
   const list = ranked(F);
-  const thead = el("thead", {}, el("tr", {}, ["Model", "Match", "Verdict", "Overall", "Fit", "Quant", "Memory", "tok/s", "Context", "Vision", "NVIDIA playbook"]
-    .map((h, i) => el("th", { class: [1, 3, 6, 7, 8].includes(i) ? "num" : "", text: h }))));
+  const thead = el("thead", {}, el("tr", {}, ["Model", "Match", "Verdict", "Overall", "Arch", "Fit", "Quant", "Memory", "tok/s", "Context", "Vision", "NVIDIA playbook"]
+    .map((h, i) => el("th", { class: [1, 3, 7, 8, 9].includes(i) ? "num" : "", text: h }))));
   const rows = list.map(r => {
     const L = r.L, v = verdictOf(r.pct), sp = L.spark || {}, t = tpsOf(L);
     return el("tr", { class: L.id === state.twinId ? "sel" : "", onclick: () => { state.twinId = L.id; renderResults(); window.scrollTo({ top: 0, behavior: "smooth" }); } }, [
@@ -1107,6 +1274,7 @@ function renderRank() {
       el("td", { class: "num", html: `<span class="mbar" style="width:${Math.round(r.pct * 0.6)}px"></span>${fmt(r.pct)}%` }),
       el("td", {}, el("span", { class: "verdict " + v.cls, text: v.label })),
       el("td", { class: "num", text: fmt(overallOf(L), 1) }),
+      el("td", {}, el("span", { class: "arch" + (archOf(L) === "MoE" ? " moe" : ""), text: archOf(L) ? archText(L).replace(" active", "") : "—" })),
       el("td", {}, el("span", { class: "fit " + (sp.fit || "native"), text: sp.fit === "tight" ? "tight" : "fits" })),
       el("td", { class: "small", text: sp.quant || "—" }),
       el("td", { class: "num", text: sp.memGB ? fmt(sp.memGB) + " GB" : "—" }),
@@ -1180,7 +1348,7 @@ function renderStatus() {
   if (state.models.length) { renderKpis(); }
 }
 
-function renderResults() { renderHero(); renderRank(); renderMatrix(); renderKpis(); renderExplain(); }
+function renderResults() { renderEffort(); renderHero(); renderRank(); renderMatrix(); renderKpis(); renderExplain(); }
 function selectTarget(id, keepTwin = false) {
   state.targetId = id;
   if (!keepTwin) { state.twinId = null; }
@@ -1199,7 +1367,7 @@ function renderAll() {
   renderFamFilter(); renderVendors(); renderTargets(); renderPresets(); renderSliders(); renderResults(); renderPending(); renderLog(); renderStatus();
 }
 
-["fVision", "fTight", "fCtx", "fTps", "fVer", "fFam", "fPlaybook"].forEach(id => $(id).addEventListener("change", () => { renderResults(); }));
+["fVision", "fTight", "fCtx", "fTps", "fVer", "fFam", "fPlaybook", "fArch", "fMode"].forEach(id => $(id).addEventListener("change", () => { state.localMode = $("fMode").value; renderResults(); }));
 window.addEventListener("hashchange", () => {
   const id = location.hash.slice(1);
   if (id && id !== state.targetId && frontier().some(m => m.id === id)) { state.vendor = null; selectTarget(id); renderVendors(); }

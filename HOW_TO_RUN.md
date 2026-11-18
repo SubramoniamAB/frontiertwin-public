@@ -1,6 +1,6 @@
 # How to Run FrontierTwin
 
-Developer: Subramoniam AB (SAB) · Version 1.0.5
+Developer: Subramoniam AB (SAB) · Version 1.1.0
 
 Step-by-step setup, run, refresh and upgrade for DGX Spark (DGX OS), Ubuntu/Linux, macOS and Windows.
 
@@ -49,23 +49,23 @@ Check Python:
 
 ```bash
 # Option A: your home folder
-unzip frontiertwin-1.0.5.zip -d ~/
+unzip frontiertwin-1.1.0.zip -d ~/
 cd ~/frontiertwin
 
 # Option B: system-wide (recommended for a service)
-sudo unzip frontiertwin-1.0.5.zip -d /opt/
+sudo unzip frontiertwin-1.1.0.zip -d /opt/
 sudo chown -R $USER:$USER /opt/frontiertwin
 cd /opt/frontiertwin
 
 chmod +x start.sh ft.py
 ```
 
-If `unzip` is missing: `sudo apt install -y unzip`, or `python3 -m zipfile -e frontiertwin-1.0.5.zip ~/`.
+If `unzip` is missing: `sudo apt install -y unzip`, or `python3 -m zipfile -e frontiertwin-1.1.0.zip ~/`.
 
 **macOS**
 
 ```bash
-unzip frontiertwin-1.0.5.zip -d ~/
+unzip frontiertwin-1.1.0.zip -d ~/
 cd ~/frontiertwin
 chmod +x start.sh ft.py
 xattr -dr com.apple.quarantine .   # only if macOS blocks the scripts
@@ -74,7 +74,7 @@ xattr -dr com.apple.quarantine .   # only if macOS blocks the scripts
 **Windows (PowerShell)**
 
 ```powershell
-Expand-Archive .\frontiertwin-1.0.5.zip -DestinationPath C:\
+Expand-Archive .\frontiertwin-1.1.0.zip -DestinationPath C:\
 cd C:\frontiertwin
 ```
 
@@ -109,7 +109,7 @@ frontiertwin/
 Expected output:
 
 ```
-FrontierTwin 1.0.5 serving at http://localhost:8080  (Ctrl+C to stop)
+FrontierTwin 1.1.0 serving at http://localhost:8080  (Ctrl+C to stop)
 ```
 
 Open **http://localhost:8080**.
@@ -129,7 +129,8 @@ Using the dashboard:
 3. Set constraints: vision, NVIDIA playbook only, tight fits, context, speed, local version/family.
 4. Read the twin panel; switch twin versions with the version buttons.
 5. Under "Deploy on your DGX Spark", pick a runtime tab and copy the commands. ✓ = covered by an official NVIDIA playbook.
-6. Click any table row or matrix cell to compare that pair.
+6. Pick a frontier **Effort level** (under the model list) and a **Local reasoning mode** / **Architecture** (Constraints). The twin panel's **Effort mapping** table shows which local mode matches each frontier effort.
+7. Click any table row or matrix cell to compare that pair.
 
 The URL keeps the selected model (e.g. `http://localhost:8080/#claude-opus-5`), so links can be bookmarked or shared.
 
@@ -491,6 +492,8 @@ Field guide:
 | `spark.tpsSource` | `measured` or `estimated` |
 | `deploy` | `hf` (Hugging Face handle), `gguf` (`repo:quant`), `ollama` (tag), `nim` (image), `image` (vLLM image override), `vllmArgs`, `verified` (list of confirmed handles) |
 | `playbooks` | NVIDIA playbook name + URL; drives the badge and ✓ tabs |
+| `modes` | Local only, optional: measured reasoning modes `{"low": {"factor": 0.85, "tokens": 600}, ...}` (factor vs high, thinking tokens per answer) |
+| `efforts` | Frontier only, optional: AA index per effort `{"max": 59.1, "medium": 48.2}` |
 
 To correct an existing model, use its existing `id`; overrides always win. To undo, delete the entry from `data/overrides.json` and restore the original with `python3 ft.py refresh --catalog <original models.json>` or an upgrade.
 

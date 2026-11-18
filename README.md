@@ -2,7 +2,7 @@
 
 Frontier-to-local model matching for NVIDIA DGX Spark.
 
-Developer: **Subramoniam AB (SAB)** · Version 1.0.5
+Developer: **Subramoniam AB (SAB)** · Version 1.1.0
 
 ![FrontierTwin dashboard: Claude Opus 5.5 matched to Qwen3.8 27B on one DGX Spark](docs/screenshot.png)
 
@@ -20,8 +20,9 @@ Self-contained: Python 3.8+ standard library only. No pip install, database, CDN
 |---|---|
 | Target picker | 25 frontier models in 14 families, version dropdown per family (e.g. Opus 5.5 / 5 / 4.8) |
 | Priorities | Presets (Balanced, Coding, Agents, Research, Vision) and six weight sliders with live share % and explanation |
-| Constraints | Vision, NVIDIA playbook only, tight fits, min context, min speed, local version and family |
-| Closest twin | Match %, verdict, capability bars, gaps, quant, memory, tok/s, context, runtime, other versions |
+| Effort levels | Frontier effort selector (low → max) and local reasoning mode (low / medium / high); effort mapping table per twin |
+| Constraints | Vision, NVIDIA playbook only, tight fits, min context, min speed, architecture (MoE / dense), local reasoning mode, local version and family |
+| Closest twin | Match %, verdict, capability bars, gaps, architecture, quant, memory, tok/s, context, runtime, other versions, effort mapping |
 | Deploy | vLLM, SGLang, TRT-LLM, llama.cpp, Ollama, NIM and Open WebUI commands; ✓ = NVIDIA playbook |
 | Ranking | All Spark-ready models against the selected target |
 | Match matrix | Every frontier model × every local model, best twin per row |
@@ -118,9 +119,12 @@ schtasks /create /tn "FrontierTwin Refresh" /sc weekly /d MON /st 10:17 /tr "py 
              "tpsSource": "measured", "runtime": "vLLM" },
   "deploy": { "hf": "me/my-qwen-finetune", "verified": ["hf"] },
   "playbooks": [{ "name": "vLLM", "url": "https://build.nvidia.com/spark/vllm" }],
+  "modes": { "low": { "factor": 0.85, "tokens": 600 }, "medium": { "factor": 0.94, "tokens": 2500 } },
   "sources": ["https://..."]
 }
 ```
+
+Optional: `modes` = your measured local reasoning modes (score factor vs high, thinking tokens per answer). Frontier entries can carry `"efforts": {"max": 59.1, "medium": 48.2, "low": 34.8}` (AA index per effort).
 
 `python3 ft.py add my-model.json` stores it in `data/overrides.json` (kept across upgrades).
 
@@ -156,6 +160,12 @@ Release manifest (host anywhere):
 4. **Quantization:** 4-bit ×0.98, 3-bit ×0.93, 2-bit ×0.88; NVFP4, MXFP4, FP8 = native.
 5. **Vision gate:** a text-only model scores 0 on Vision against a vision model.
 6. **Fit and speed:** "fits" = weights + ~8 GB cache under 119 GB; "est." speed from active parameters and 273 GB/s.
+
+7. **Frontier effort:** scores are at the top published effort; a lower effort scales them by AA index(effort) ÷ AA index(top) (reasoning-heavy capabilities fully, vision ×0.5, knowledge ×0.3). Published for Fable 5.2, Opus 5.5, GPT-6 Astra, Gemini 4 Carbon.
+8. **Local reasoning mode:** published local scores = High; Medium ×0.92 and Low ×0.82 are an estimated profile (thinking tokens 800 / 3,000 / 8,000) until measured. A model's own `modes` data replaces it.
+9. **MoE vs dense:** MoE memory uses total params, speed uses active params; filter with Architecture.
+
+**Effort mapping** (twin panel): rows = frontier effort, columns = local mode, cells = match %. The outlined cell is the cheapest local mode reaching the best match, e.g. "Opus 5.5 low ≈ Qwen3.8 27B high · 90%". Time per answer = (thinking + 500 answer tokens) ÷ tok/s.
 
 | Verdict | Match % |
 |---|---|
