@@ -1,0 +1,10 @@
+services:
+  frontiertwin:
+    build: .
+    image: frontiertwin:latest
+    container_name: frontiertwin
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data          # catalog + overrides live on the host and survive rebuilds
+    restart: unless-stopped

@@ -1,0 +1,10 @@
+{
+  "host": "0.0.0.0",
+  "port": 8080,
+  "catalog_url": "",
+  "update_manifest_url": "",
+  "discover_limit": 60,
+  "discover_max_age_days": 120,
+  "allow_web_refresh": true,
+  "web_refresh_discover": false
+}

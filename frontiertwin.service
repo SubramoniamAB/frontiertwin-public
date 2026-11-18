@@ -1,0 +1,15 @@
+# systemd unit (Ubuntu / DGX OS). Edit User and WorkingDirectory, then:
+#   sudo cp frontiertwin.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now frontiertwin
+[Unit]
+Description=FrontierTwin dashboard (developer: Subramoniam AB)
+After=network-online.target
+
+[Service]
+User=REPLACE_WITH_YOUR_USER
+WorkingDirectory=/opt/frontiertwin
+ExecStart=/usr/bin/python3 /opt/frontiertwin/ft.py serve
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

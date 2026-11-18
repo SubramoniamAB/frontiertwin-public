@@ -1,0 +1,4 @@
+{
+ "_readme": "Models here override or extend data/models.json on every 'ft.py refresh'. Same schema as a models.json entry; match by id.",
+ "models": []
+}

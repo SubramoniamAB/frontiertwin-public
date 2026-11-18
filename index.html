@@ -1,0 +1,1402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="frontiertwin-version" content="1.0.5">
+<title>FrontierTwin</title>
+<meta name="author" content="Subramoniam AB (SAB)">
+<!-- FrontierTwin · Developer: Subramoniam AB (SAB) -->
+<style>
+/* Layout: control rail (target + priorities) beside a results column; matrix + backlog below. */
+:root {
+  --bg: #eef1f4; --panel: #ffffff; --ink: #141a22; --muted: #5a6573; --line: #d5dbe2;
+  --accent: #1f5fd1; --accent-soft: #e2ebfb; --frontier: #8a4fd6; --frontier-soft: #efe6fb;
+  --good: #1b8a5a; --warn: #b7791f; --bad: #c2413a; --chip: #e7ebf0;
+  --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1419; --panel: #171e26; --ink: #e6ebf1; --muted: #93a0ae; --line: #2a3440;
+  --accent: #6b9dff; --accent-soft: #1b2a45; --frontier: #b78cf2; --frontier-soft: #2a1f3d;
+  --good: #3fbf86; --warn: #e0a64a; --bad: #ef6b63; --chip: #222b36; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f1419; --panel: #171e26; --ink: #e6ebf1; --muted: #93a0ae; --line: #2a3440;
+  --accent: #6b9dff; --accent-soft: #1b2a45; --frontier: #b78cf2; --frontier-soft: #2a1f3d;
+  --good: #3fbf86; --warn: #e0a64a; --bad: #ef6b63; --chip: #222b36; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { margin: 0 }
+[hidden] { display: none !important }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px }
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 20px }
+h1, h2, h3 { font-family: var(--f-display); margin: 0; text-wrap: balance; letter-spacing: -0.01em }
+h1 { font-size: 26px; font-weight: 800 }
+h2 { font-size: 17px; font-weight: 700 }
+h3 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted) }
+.mono, td.num, .num { font-family: var(--f-mono); font-variant-numeric: tabular-nums }
+.muted { color: var(--muted) }
+.small { font-size: 12px }
+button { font: inherit; color: inherit; cursor: pointer }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+a { color: var(--accent) }
+
+/* header: app bar + lede + KPI strip */
+header.appbar { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; display: grid; gap: 16px }
+.bar { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between }
+.brand { display: flex; align-items: center; gap: 14px; min-width: 0 }
+.brand svg { flex: none }
+.eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted) }
+.brand h1 { font-size: 28px; line-height: 1.1 }
+.brand h1 span { color: var(--accent) }
+.lede { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.55; max-width: none }
+.status { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0; border-top: 1px solid var(--line); padding-top: 14px }
+.kpi { padding: 0 16px; border-left: 1px solid var(--line); min-width: 0 }
+.kpi:first-child { padding-left: 0; border-left: 0 }
+.kpi .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em }
+.kpi .v { font-family: var(--f-display); font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums }
+.kpi .s { font-size: 12px; color: var(--muted); overflow-wrap: anywhere }
+@media (max-width: 640px) { .kpis { grid-template-columns: 1fr 1fr; row-gap: 12px } .kpi:nth-child(odd) { border-left: 0; padding-left: 0 } .kpi .v { font-size: 18px } }
+/* weights explainer */
+.share { font-family: var(--f-mono); font-size: 11px; color: var(--muted); text-align: right }
+.explain { font-size: 12px; color: var(--muted); background: var(--chip); border-radius: 8px; padding: 10px 12px; display: grid; gap: 6px }
+.explain p { margin: 0 }
+.explain strong { color: var(--ink) }
+/* icon buttons, toast */
+.iconbtn { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink) }
+.iconbtn:hover { border-color: var(--accent); color: var(--accent) }
+.iconbtn.spin svg { animation: spin 0.9s linear infinite }
+@keyframes spin { to { transform: rotate(360deg) } }
+.toast { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 50;
+  background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 8px; font-size: 13px; max-width: min(420px, calc(100vw - 32px)); box-shadow: 0 6px 24px rgb(0 0 0 / 0.18) }
+/* help dialog */
+dialog#help { border: 1px solid var(--line); border-radius: 14px; padding: 0; width: min(980px, calc(100vw - 32px)); max-height: min(760px, calc(100vh - 48px));
+  background: var(--panel); color: var(--ink); box-shadow: 0 20px 60px rgb(0 0 0 / 0.25) }
+dialog#help::backdrop { background: rgb(15 20 25 / 0.45) }
+.help { display: grid; grid-template-rows: auto 1fr; max-height: inherit }
+.help-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--line) }
+.help-body { display: grid; grid-template-columns: 210px minmax(0, 1fr); min-height: 0; overflow: hidden }
+.help-nav { display: grid; align-content: start; gap: 2px; padding: 12px; border-right: 1px solid var(--line); overflow-y: auto }
+.help-nav button { text-align: left; border: 0; background: transparent; padding: 8px 10px; border-radius: 6px; font-size: 13px }
+.help-nav button:hover { background: var(--chip) }
+.help-nav button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600 }
+.help-content { padding: 18px 24px 24px; overflow-y: auto; font-size: 14px; line-height: 1.6 }
+.help-content h3 { font-family: var(--f-display); font-size: 18px; text-transform: none; letter-spacing: 0; color: var(--ink); margin: 0 0 8px }
+.help-content h4 { font-size: 13px; margin: 14px 0 6px }
+.help-content p, .help-content ul, .help-content ol { margin: 0 0 10px; max-width: 72ch }
+.help-content li { margin-bottom: 4px }
+.help-content pre { background: var(--chip); border-radius: 8px; padding: 10px 12px; overflow-x: auto; font-family: var(--f-mono); font-size: 12px; line-height: 1.55; margin: 0 0 10px }
+.help-content code, kbd { font-family: var(--f-mono); font-size: 12px; background: var(--chip); padding: 1px 5px; border-radius: 4px }
+.formula { font-family: var(--f-mono); font-size: 13px; background: var(--accent-soft); color: var(--accent); padding: 10px 12px; border-radius: 8px; margin: 0 0 10px }
+.htable { width: 100%; border-collapse: collapse; margin: 0 0 12px; font-size: 13px }
+.htable th, .htable td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top }
+@media (max-width: 720px) { .help-body { grid-template-columns: 1fr } .help-nav { grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line) } }
+/* matrix extras */
+.matrix td.best { box-shadow: inset 0 0 0 2px var(--ink); font-weight: 600 }
+.matrix td.bestcol { text-align: left; font-family: var(--f-body); white-space: nowrap; padding-left: 10px; color: var(--ink) }
+.matrix th.row { position: sticky; left: 0; background: var(--panel); z-index: 1 }
+.mx-help { display: grid; grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr); gap: 16px; font-size: 13px; color: var(--muted) }
+.mx-help p { margin: 0 0 6px }
+.mx-legend { display: grid; gap: 6px }
+.mx-scale { height: 10px; border-radius: 5px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 6%, transparent), var(--accent)) }
+.mx-ticks { display: flex; justify-content: space-between; font-family: var(--f-mono); font-size: 11px }
+@media (max-width: 720px) { .mx-help { grid-template-columns: 1fr } }
+/* method panel */
+.mgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px }
+.mcard { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 4px; align-content: start }
+.mcard h4 { margin: 0; font-size: 13px }
+.mcard p { margin: 0; font-size: 13px; color: var(--muted) }
+/* credit */
+.credit { display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--line); padding-top: 12px; flex-wrap: wrap }
+.credit img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line) }
+.credit .who { display: grid; line-height: 1.35 }
+.credit .who strong { color: var(--ink); font-size: 13px }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--chip); font-size: 12px; white-space: nowrap }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted) }
+.dot.live { background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 25%, transparent) }
+.dot.stale { background: var(--warn) }
+
+.grid { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 20px; align-items: start }
+@media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr) } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 14px; min-width: 0; align-content: start }
+[hidden] { display: none !important }
+
+/* target picker */
+.vendors { display: flex; flex-wrap: wrap; gap: 6px }
+.vtab { border: 1px solid var(--line); background: transparent; padding: 4px 10px; border-radius: 6px; font-size: 12px }
+.vtab[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink) }
+.targets { display: grid; gap: 6px }
+.target { display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left; width: 100%;
+  border: 1px solid var(--line); background: var(--panel); padding: 8px 10px; border-radius: 8px }
+.target:hover { border-color: var(--frontier) }
+.target[aria-pressed="true"] { border-color: var(--frontier); background: var(--frontier-soft) }
+.target .tier { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em }
+.fam { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center }
+.vsel { font: inherit; font-size: 12px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); max-width: 120px }
+.deploy { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px }
+.rtabs { display: flex; flex-wrap: wrap; gap: 6px }
+.rtab { border: 1px solid var(--line); background: transparent; padding: 4px 10px; border-radius: 6px; font-size: 12px }
+.rtab[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink) }
+.rtab .pb { color: var(--good); font-weight: 600 }
+.code { position: relative; background: var(--chip); border-radius: 8px; padding: 12px; overflow-x: auto }
+.code pre { margin: 0; font-family: var(--f-mono); font-size: 12px; line-height: 1.55; white-space: pre }
+.copy { position: absolute; top: 8px; right: 8px; font-size: 11px; padding: 3px 8px; border-radius: 5px; border: 1px solid var(--line); background: var(--panel) }
+.badge { display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: 0.04em; padding: 1px 6px; border-radius: 4px; background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good); white-space: nowrap; text-decoration: none }
+.badge.warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn) }
+details summary { cursor: pointer; font-size: 12px; color: var(--accent) }
+.twinver { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px }
+
+/* priorities */
+.presets { display: flex; flex-wrap: wrap; gap: 6px }
+.preset { border: 1px solid var(--line); background: transparent; padding: 4px 10px; border-radius: 999px; font-size: 12px }
+.preset[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent) }
+.slider { display: grid; grid-template-columns: 92px 1fr 22px 38px; gap: 8px; align-items: center; font-size: 13px }
+.slider input { width: 100%; accent-color: var(--accent) }
+.filters { display: grid; gap: 8px; font-size: 13px }
+.filters label { display: flex; gap: 8px; align-items: center; justify-content: space-between }
+.filters select { font: inherit; padding: 2px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink) }
+
+/* twin hero */
+.hero { display: grid; gap: 16px }
+.vs { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center }
+@media (max-width: 560px) { .vs { grid-template-columns: 1fr } .vs .arrow { display: none } }
+.side { min-width: 0 }
+.side .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted) }
+.side .name { font-family: var(--f-display); font-size: 20px; font-weight: 700 }
+.side.f .name { color: var(--frontier) }
+.side.l .name { color: var(--accent) }
+.gauge { text-align: center }
+.gauge svg { display: block; margin: 0 auto }
+.verdict { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600 }
+.v-eq { background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good) }
+.v-close { background: var(--accent-soft); color: var(--accent) }
+.v-part { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn) }
+.v-far { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad) }
+
+.bars { display: grid; gap: 10px }
+.bar-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) 64px; gap: 10px; align-items: center; font-size: 13px }
+.bar-track { position: relative; height: 22px; background: var(--chip); border-radius: 4px; overflow: hidden }
+.bar-f { position: absolute; left: 0; top: 0; height: 10px; background: var(--frontier); border-radius: 0 2px 2px 0 }
+.bar-l { position: absolute; left: 0; bottom: 0; height: 10px; background: var(--accent); border-radius: 0 2px 2px 0 }
+.bar-l.imputed { background: repeating-linear-gradient(135deg, var(--accent) 0 4px, transparent 4px 7px); border: 1px solid var(--accent) }
+.bar-l.missing { background: var(--bad); width: 3px !important }
+.delta { text-align: right; font-family: var(--f-mono); font-size: 12px }
+.delta.neg { color: var(--bad) } .delta.pos { color: var(--good) } .delta.mid { color: var(--warn) }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted) }
+.sw { display: inline-block; width: 12px; height: 8px; border-radius: 2px; vertical-align: middle; margin-right: 4px }
+
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px }
+.fact { border-top: 1px solid var(--line); padding-top: 8px; min-width: 0 }
+.fact .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em }
+.fact .v { font-family: var(--f-mono); font-size: 14px; overflow-wrap: anywhere }
+.notes { display: grid; gap: 6px; margin: 0; padding-left: 18px }
+.notes li.gap::marker { color: var(--bad) }
+.notes li.ok::marker { color: var(--good) }
+
+/* tables */
+.scroll { overflow-x: auto }
+table { border-collapse: collapse; width: 100%; font-size: 13px }
+th { text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap }
+td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: middle }
+td.num, th.num { text-align: right }
+tbody tr { cursor: pointer }
+tbody tr:hover { background: var(--accent-soft) }
+tr.sel { background: var(--accent-soft) }
+.mbar { display: inline-block; height: 6px; border-radius: 3px; background: var(--accent); vertical-align: middle; margin-right: 6px }
+.fit { font-size: 11px; padding: 1px 7px; border-radius: 999px; white-space: nowrap }
+.fit.native { background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good) }
+.fit.tight { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn) }
+.est { color: var(--muted); font-size: 11px }
+
+/* matrix */
+.matrix td, .matrix th { text-align: center; padding: 6px 4px; font-family: var(--f-mono); font-size: 12px }
+.matrix th.row { text-align: left; font-family: var(--f-body); font-size: 12px; text-transform: none; letter-spacing: 0; color: var(--ink); white-space: nowrap }
+.matrix thead th { writing-mode: vertical-rl; transform: rotate(180deg); height: 130px; vertical-align: bottom; text-transform: none; letter-spacing: 0; font-family: var(--f-body) }
+.matrix td { border: 2px solid var(--panel); border-radius: 4px; color: var(--ink) }
+
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px }
+.cards { display: grid; gap: 8px }
+.card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 2px }
+.log { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none }
+.log li { display: grid; grid-template-columns: 92px 1fr; gap: 10px; font-size: 13px }
+.empty { text-align: center; padding: 48px 16px; color: var(--muted) }
+.empty h2 { color: var(--ink); margin-bottom: 6px }
+footer { color: var(--muted); font-size: 12px; display: grid; gap: 6px }
+footer p { margin: 0 }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+
+/* settings dialog (self-hosted) */
+dialog.sdlg { border: 1px solid var(--line); border-radius: 14px; padding: 0; width: min(520px, calc(100vw - 32px)); background: var(--panel); color: var(--ink); box-shadow: 0 20px 60px rgb(0 0 0 / 0.25) }
+dialog.sdlg::backdrop { background: rgb(15 20 25 / 0.45) }
+.sbody { padding: 16px 20px 20px; display: grid; gap: 12px }
+.sbody h3 { margin: 0; font-size: 13px }
+.sbody p { margin: 0 }
+.sfield { display: grid; gap: 6px; font-size: 13px; font-weight: 600 }
+.sfield input { font: inherit; font-family: var(--f-mono); font-size: 16px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); width: 100% }
+.smsg { font-size: 13px; padding: 8px 10px; border-radius: 8px }
+.smsg.ok { background: color-mix(in srgb, var(--good) 15%, transparent); color: var(--good) }
+.smsg.err { background: color-mix(in srgb, var(--bad) 13%, transparent); color: var(--bad) }
+.smsg.info { background: var(--chip); color: var(--muted) }
+.sactions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap }
+.primary { border: 1px solid var(--accent); background: var(--accent); color: #fff; padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600 }
+.primary:hover { filter: brightness(1.08) }
+.snotes { margin: 0; padding-left: 18px; display: grid; gap: 4px }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="appbar">
+    <div class="bar">
+      <div class="brand">
+        <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
+          <rect width="44" height="44" rx="10" fill="var(--ink)"/>
+          <circle cx="17" cy="22" r="9" fill="none" stroke="var(--frontier)" stroke-width="3"/>
+          <circle cx="27" cy="22" r="9" fill="none" stroke="var(--accent)" stroke-width="3"/>
+        </svg>
+        <div>
+          <div class="eyebrow">Frontier-to-local model matching · NVIDIA DGX Spark</div>
+          <h1>Frontier<span>Twin</span></h1>
+        </div>
+      </div>
+      <div class="status" id="status">
+        <span class="pill"><span class="dot" id="liveDot"></span><span id="liveText">Connecting…</span></span>
+        <span class="pill mono">1× DGX Spark · 128 GB · 273 GB/s</span>
+        <button class="iconbtn" id="btnSettings" title="Settings" aria-label="Settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+        <button class="iconbtn" id="btnRefresh" title="Refresh data now" aria-label="Refresh data">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        </button>
+        <button class="iconbtn" id="btnHelp" title="Help (?)" aria-label="Help">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .8c0 1.8-2.5 2.2-2.5 3.8"/><path d="M12 17.2v.1"/></svg>
+        </button>
+      </div>
+    </div>
+    <p class="lede">Choose the paid model you rely on. FrontierTwin ranks the open models that run on a single DGX Spark by how closely they match it, shows where each falls short, and what it costs in speed and memory, with ready-to-run deploy commands.</p>
+    <div class="kpis" id="kpis" hidden></div>
+  </header>
+
+  <div id="app" hidden>
+    <div class="grid">
+      <aside class="panel" aria-label="Controls">
+        <div><h3>1 · Frontier model you pay for</h3></div>
+        <div class="vendors" id="vendors"></div>
+        <div class="targets" id="targets"></div>
+
+        <div><h3>2 · What matters to you</h3></div>
+        <div class="presets" id="presets"></div>
+        <div id="sliders" class="filters"></div>
+        <div class="explain" id="explain"></div>
+
+        <div><h3>3 · Constraints</h3></div>
+        <div class="filters">
+          <label for="fVision">Must understand images <input type="checkbox" id="fVision"></label>
+          <label for="fPlaybook">Has an NVIDIA Spark playbook <input type="checkbox" id="fPlaybook"></label>
+          <label for="fTight">Include tight fits (2–3 bit quants) <input type="checkbox" id="fTight" checked></label>
+          <label for="fCtx">Min context
+            <select id="fCtx"><option value="0">Any</option><option value="128">128K</option><option value="256">256K</option><option value="1000">1M</option></select></label>
+          <label for="fVer">Local versions
+            <select id="fVer"><option value="all">All versions</option><option value="latest">Latest of each family</option></select></label>
+          <label for="fFam">Local family
+            <select id="fFam"><option value="">All families</option></select></label>
+          <label for="fTps">Min speed (tok/s)
+            <select id="fTps"><option value="0">Any</option><option value="20">20</option><option value="40">40</option><option value="70">70</option></select></label>
+        </div>
+      </aside>
+
+      <main class="panel hero" id="hero" aria-live="polite"></main>
+    </div>
+
+    <section class="panel" style="margin-top:20px">
+      <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:baseline">
+        <h2 id="rankTitle">All Spark-ready models</h2>
+        <span class="small muted">Click a row to compare it in detail</span>
+      </div>
+      <div class="scroll"><table id="rank"></table></div>
+    </section>
+
+    <section class="panel" style="margin-top:20px">
+      <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:baseline">
+        <h2>Match matrix</h2>
+        <span class="small muted">Every paid model against every local model that passes your constraints</span>
+      </div>
+      <div class="mx-help">
+        <div>
+          <p><strong>Rows</strong> are frontier (paid) models, strongest first. <strong>Columns</strong> are local models that run on one DGX Spark, strongest first. Each <strong>cell</strong> is the capability match % for that pair, using your current sliders.</p>
+          <p>The <strong>outlined cell</strong> is the best local model for that row; the <strong>Best twin</strong> column names it. Scan a row to compare local options for one paid model; scan a column to see which paid models one local model can stand in for. Click any cell to open that pair above.</p>
+        </div>
+        <div class="mx-legend" aria-label="Color scale">
+          <div class="mx-scale"></div>
+          <div class="mx-ticks"><span>20%</span><span>60</span><span>75</span><span>90</span><span>100%</span></div>
+          <div class="small">Darker = closer. 90+ near-equivalent · 75–90 close · 60–75 partial · below 60 distant.</div>
+        </div>
+      </div>
+      <div class="scroll"><table class="matrix" id="matrix"></table></div>
+    </section>
+
+    <div class="two" style="margin-top:20px">
+      <section class="panel">
+        <h2>Pending: runs on Spark, awaiting scores</h2>
+        <div class="explain">
+          <p><strong>What "pending" means.</strong> These models fit and run on one DGX Spark (memory, speed and deploy commands are known), but no public benchmark scores exist yet for coding, reasoning, knowledge and the other capabilities.</p>
+          <p>Without scores there is nothing to compare against a paid model, so they are <strong>not included</strong> in the match %, the ranking table, the closest twin or the matrix.</p>
+          <p>A pending model joins the ranking automatically once its scores are added (an updated catalog, or <code>ft.py add</code> with <code>"kind": "local"</code>). Models found by <code>ft.py refresh --discover</code> also start here.</p>
+        </div>
+        <div class="cards" id="pending"></div>
+      </section>
+      <section class="panel">
+        <h2>What changed</h2>
+        <ul class="log" id="log"></ul>
+      </section>
+    </div>
+  </div>
+
+  <section class="panel empty" id="empty">
+    <h2>Loading the model catalog</h2>
+    <p>Frontier targets, Spark-ready open models and their benchmark scores appear here once data/models.json loads. Start the app with <code>python3 ft.py serve</code> and open http://localhost:8080.</p>
+  </section>
+
+  <section class="panel method">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:baseline">
+      <h2>How matching works</h2>
+      <button class="preset" id="methodHelp">Open the full guide</button>
+    </div>
+    <div class="mgrid">
+      <div class="mcard"><h4>1 · Capability ratio</h4><p>For each capability (BenchLM 0–100), local score ÷ frontier score, capped at 100%. Beating the frontier model on one capability cannot hide a gap in another.</p></div>
+      <div class="mcard"><h4>2 · Your weights</h4><p>Match % = Σ (weight × ratio) ÷ Σ weights. Sliders set each weight from 0 (ignore) to 5; the % beside each slider is its share.</p></div>
+      <div class="mcard"><h4>3 · Estimates</h4><p>Where a local model only has an overall score, its capability is estimated from that score using the frontier model's profile. Shown as hatched bars.</p></div>
+      <div class="mcard"><h4>4 · Quantization</h4><p>Local scores are lowered about 2% at 4-bit, 7% at 3-bit and 12% at 2-bit. NVFP4, MXFP4 and FP8 are treated as native precision.</p></div>
+      <div class="mcard"><h4>5 · Vision gate</h4><p>If the frontier model reads images and the local model does not, Vision scores 0 for that pair.</p></div>
+      <div class="mcard"><h4>6 · Fit and speed</h4><p>"Fits" = weights plus ~8 GB cache under 119 GB. Speeds are measured single-user decode on a Spark; "est." is computed from active parameters and 273 GB/s.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <p id="sources"></p>
+    <div class="credit">
+      <img alt="Subramoniam AB" src="data:image/jpeg;base64,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">
+      <div class="who"><strong>Subramoniam AB (SAB)</strong><span>Developer</span></div>
+      <span class="small" id="buildInfo">FrontierTwin v1.0.5 · self-hosted · <span id="appVer"></span></span>
+    </div>
+  </footer>
+</div>
+
+  <dialog id="help" aria-labelledby="helpTitle">
+    <div class="help">
+      <div class="help-head">
+        <div>
+          <div class="eyebrow">FrontierTwin guide</div>
+          <h2 id="helpTitle">Help</h2>
+        </div>
+        <button class="iconbtn" id="helpClose" aria-label="Close help" title="Close (Esc)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="help-body">
+        <nav class="help-nav" id="helpNav" aria-label="Help topics">
+          <button data-t="h-start" aria-pressed="true">Getting started</button>
+          <button data-t="h-weights">Priorities &amp; sliders</button>
+          <button data-t="h-results">Reading the results</button>
+          <button data-t="h-matrix">Match matrix</button>
+          <button data-t="h-deploy">Deploy on DGX Spark</button>
+          <button data-t="h-refresh">Refresh &amp; live updates</button>
+          <button data-t="h-install">Install &amp; upgrade</button>
+          <button data-t="h-about">About</button>
+        </nav>
+        <div class="help-content">
+
+          <section id="h-start">
+            <h3>Getting started</h3>
+            <ol>
+              <li><strong>Pick the paid model.</strong> Choose a vendor tab, then a model. Use the version dropdown beside it (for example Opus 5.5, 5 or 4.8).</li>
+              <li><strong>Set priorities.</strong> Click a preset (Balanced, Coding, Agents, Research, Vision) or move the sliders.</li>
+              <li><strong>Set constraints.</strong> Vision, NVIDIA playbook only, tight fits, minimum context, minimum speed, local version and family.</li>
+              <li><strong>Read the twin.</strong> The right panel shows the closest open model, its match %, capability bars, gaps and hardware facts.</li>
+              <li><strong>Deploy it.</strong> Copy the commands under "Deploy on your DGX Spark".</li>
+            </ol>
+            <p>The address bar keeps the selected model (for example <code>#claude-opus-5</code>), so you can bookmark or share a view. Press <kbd>?</kbd> anywhere to open this guide, <kbd>Esc</kbd> to close it.</p>
+          </section>
+
+          <section id="h-weights" hidden>
+            <h3>Priorities &amp; sliders</h3>
+            <p>Each slider sets how much one capability counts in the match % (0 = ignore, 5 = most important). The % at the right of each slider is its share of the score.</p>
+            <div class="formula">Match % = Σ (weight × capability ratio) ÷ Σ weights</div>
+            <p><strong>Capability ratio</strong> = local score ÷ frontier score, capped at 100%. A local model that beats the frontier model on one capability cannot make up for a weakness elsewhere.</p>
+            <p><strong>Example (Research preset):</strong> Reasoning 5, Knowledge 4, Math 3, Agents 2, Coding 1, Vision 1. Total = 16, so Reasoning is 31% of the score and Coding 6%. A model weak at coding loses little; one weak at reasoning loses a lot.</p>
+            <ul>
+              <li>Moving a slider re-ranks every model, the closest twin, the table, the matrix and the summary tiles at once.</li>
+              <li>Weight 0 removes a capability from the score; its bar still shows, marked with "·".</li>
+              <li>Sliders change ranking only. Which models qualify is set by the constraints (fit, speed, context, vision, playbook).</li>
+              <li>Moving any slider clears the preset highlight; click a preset to restore its values.</li>
+            </ul>
+          </section>
+
+          <section id="h-results" hidden>
+            <h3>Reading the results</h3>
+            <table class="htable">
+              <tr><th>Verdict</th><th>Match %</th><th>Meaning</th></tr>
+              <tr><td><span class="verdict v-eq">Near-equivalent</span></td><td>≥ 90</td><td>Can replace the paid model for these priorities</td></tr>
+              <tr><td><span class="verdict v-close">Close</span></td><td>75–90</td><td>Small, specific gaps</td></tr>
+              <tr><td><span class="verdict v-part">Partial</span></td><td>60–75</td><td>Usable for some tasks; escalate hard ones</td></tr>
+              <tr><td><span class="verdict v-far">Distant</span></td><td>&lt; 60</td><td>Not a substitute</td></tr>
+            </table>
+            <ul>
+              <li><strong>Bars:</strong> purple = frontier model, blue = local model. The number at right is the point difference.</li>
+              <li><strong>Hatched bar:</strong> the local model has no published score for that capability; it is estimated from its overall score using the frontier model's profile.</li>
+              <li><strong>Red "no vision":</strong> the frontier model reads images and the local model does not; that capability scores 0.</li>
+              <li><strong>Quantization:</strong> scores are lowered about 2% at 4-bit, 7% at 3-bit, 12% at 2-bit. NVFP4, MXFP4 and FP8 are not penalized.</li>
+              <li><strong>Fit:</strong> "fits" = weights plus about 8 GB cache under 119 GB; "tight" = 2–3 bit quant or over about 95 GB.</li>
+              <li><strong>tok/s:</strong> measured single-user decode speed on a Spark; "est." = computed from active parameters and 273 GB/s bandwidth.</li>
+              <li><strong>Pending:</strong> a model that runs on a Spark but has no published capability scores yet. It is listed under "Pending" with speed, memory and deploy commands, but is left out of the match %, ranking and matrix until scores exist.</li>
+              <li><strong>Versions:</strong> the buttons under the twin score other versions of the same local family against the same target.</li>
+            </ul>
+          </section>
+
+          <section id="h-matrix" hidden>
+            <h3>Match matrix</h3>
+            <p>Every frontier model (rows) against every local model that passes your constraints (columns), scored with your current sliders.</p>
+            <ul>
+              <li><strong>Cell</strong> = match % for that pair. Darker = closer match.</li>
+              <li><strong>Outlined cell</strong> = best local model for that row.</li>
+              <li><strong>Best twin column</strong> (right) names it and gives its score.</li>
+              <li>Rows are sorted by frontier overall score; columns by local overall score, strongest first.</li>
+              <li>Click any cell to open that pair in the twin panel.</li>
+            </ul>
+            <p><strong>How to use it:</strong> scan down a column to see which paid models one local model can stand in for; scan across a row to compare local options for one paid model. Bottom rows (small paid models) usually show the highest scores, meaning those are the easiest to replace locally.</p>
+          </section>
+
+          <section id="h-deploy" hidden>
+            <h3>Deploy on DGX Spark</h3>
+            <p>Below the twin, pick a runtime tab and click <strong>Copy</strong>. A <strong>✓</strong> on a tab means an official NVIDIA DGX Spark playbook covers that model on that runtime; the green badge links to the playbook.</p>
+            <table class="htable">
+              <tr><th>Runtime</th><th>Port</th><th>Notes</th></tr>
+              <tr><td>vLLM</td><td>8000</td><td>NVIDIA container; OpenAI-compatible API. Default choice.</td></tr>
+              <tr><td>SGLang</td><td>30000</td><td>Adds <code>--quantization modelopt_fp4</code> for NVFP4 models</td></tr>
+              <tr><td>TRT-LLM</td><td>8355</td><td>Highest throughput; NVIDIA's TensorRT-LLM container</td></tr>
+              <tr><td>llama.cpp</td><td>30000</td><td>GGUF files; one-time CUDA build for GB10</td></tr>
+              <tr><td>Ollama</td><td>11434</td><td>Simplest install; fewer tuning options</td></tr>
+              <tr><td>NIM</td><td>8000</td><td>Prebuilt NVIDIA container; needs an NGC API key</td></tr>
+              <tr><td>Chat UI</td><td>3000 / 8080</td><td>Open WebUI in front of the server</td></tr>
+            </table>
+            <ol>
+              <li>Create a Hugging Face token (huggingface.co/settings/tokens) and replace <code>&lt;your_hf_token&gt;</code>.</li>
+              <li>If the handle shows <em>verify on Hugging Face</em>, confirm the exact repository name first.</li>
+              <li>Run the block on the Spark; the health loop waits until the model is loaded (large models: several minutes).</li>
+              <li>Test with the included <code>curl</code>, then point your tools at <code>http://&lt;spark-ip&gt;:&lt;port&gt;/v1</code>.</li>
+            </ol>
+            <p><code>--max-model-len</code> is capped at 131072 to keep memory in budget; raise it if the model is small.</p>
+          </section>
+
+          <section id="h-refresh" hidden>
+            <h3>Refresh &amp; live updates</h3>
+            <p><strong>Automatic:</strong> open pages re-read the catalog every 60 seconds and when the tab regains focus. No reload needed.</p>
+            <p><strong>Manual:</strong> click the <strong>refresh icon</strong> in the header. On a self-hosted server it rebuilds the catalog (merging <code>catalog_url</code> if set) and reloads the data. In offline file mode it reloads the page.</p>
+            <p><strong>Status chip:</strong> green = data refreshed within 10 days; amber = older or unreachable.</p>
+            <h4>Command line (self-hosted)</h4>
+            <pre>python3 ft.py refresh                     # rebuild + apply your overrides
+python3 ft.py refresh --discover          # add new Spark-sized models from Hugging Face
+python3 ft.py refresh --catalog URL       # merge a newer shared catalog
+python3 ft.py add my-model.json           # add or correct a model</pre>
+            <h4>Scheduled refresh</h4>
+            <pre># Ubuntu / DGX OS / macOS (crontab -e): Mondays 10:17
+17 10 * * 1 cd /opt/frontiertwin &amp;&amp; python3 ft.py refresh --discover &gt;&gt; refresh.log 2&gt;&amp;1
+
+# Windows
+schtasks /create /tn "FrontierTwin Refresh" /sc weekly /d MON /st 10:17 /tr "py -3 C:\frontiertwin\ft.py refresh --discover"</pre>
+            <p>Full options, systemd timer and Docker variants: <code>HOW_TO_RUN.md</code>, sections 9–11.</p>
+          </section>
+
+          <section id="h-install" hidden>
+            <h3>Install &amp; upgrade</h3>
+            <table class="htable">
+              <tr><th>System</th><th>Start</th></tr>
+              <tr><td>DGX OS / Ubuntu / macOS</td><td><code>./start.sh</code> (or <code>python3 ft.py serve</code>)</td></tr>
+              <tr><td>Windows</td><td>double-click <code>start.bat</code> (or <code>py -3 ft.py serve</code>)</td></tr>
+              <tr><td>Docker</td><td><code>docker compose up -d --build</code></td></tr>
+              <tr><td>Service</td><td>systemd unit <code>frontiertwin.service</code></td></tr>
+              <tr><td>No server</td><td>double-click <code>index.html</code> (offline, no auto-refresh)</td></tr>
+            </table>
+            <p>Open <code>http://localhost:8080</code> or <code>http://&lt;spark-ip&gt;:8080</code>. Options: <code>--host</code>, <code>--port</code>, or <code>config.json</code>.</p>
+            <h4>Changing the port</h4>
+            <ul>
+              <li><strong>In the page (self-hosted):</strong> gear icon → Settings → enter a port → <em>Check port</em> → <em>Apply and move</em>. The server starts on the new port, saves it to <code>config.json</code> and the page opens the new address. If the port is taken, you get a message and a suggested free port.</li>
+              <li><strong>At start-up:</strong> if the saved port is busy, <code>start.sh</code> / <code>start.bat</code> asks for another port in the terminal (Enter accepts the suggestion). As a service with no terminal, the next free port is used and printed in the log.</li>
+            </ul>
+            <h4>Upgrade</h4>
+            <pre>python3 ft.py check-update                 # needs update_manifest_url in config.json
+python3 ft.py upgrade --from frontiertwin-x.y.z.zip
+python3 ft.py rollback                     # restore previous version</pre>
+            <p>Upgrades back up the current install, keep <code>config.json</code>, <code>overrides.json</code> and newer data. Restart the server afterwards.</p>
+            <p>Step-by-step for every OS: <code>HOW_TO_RUN.md</code>. Summary: <code>README.md</code>.</p>
+          </section>
+
+          <section id="h-about" hidden>
+            <h3>About</h3>
+            <div class="credit" style="border-top:0;padding-top:0">
+              <img alt="Subramoniam AB" id="aboutPhoto">
+              <div class="who"><strong>Subramoniam AB (SAB)</strong><span>Developer</span></div>
+            </div>
+            <p id="aboutVer"></p>
+            <p><strong>Data:</strong> BenchLM category scores, Artificial Analysis Intelligence Index v5, community DGX Spark speed measurements, NVIDIA DGX Spark playbooks. Scores are public benchmarks, not your workload; validate a twin on your own tasks before switching.</p>
+          </section>
+
+        </div>
+      </div>
+    </div>
+  </dialog>
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <dialog id="settings" class="sdlg" aria-labelledby="setTitle">
+    <form method="dialog" class="sform" id="setForm">
+      <div class="help-head">
+        <div>
+          <div class="eyebrow">FrontierTwin</div>
+          <h2 id="setTitle">Settings</h2>
+        </div>
+        <button type="button" class="iconbtn" id="setClose" aria-label="Close settings" title="Close (Esc)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="sbody">
+        <h3>Server port</h3>
+        <p class="small muted" id="setNow">Checking the running server…</p>
+
+        <label class="sfield" for="setPort">New port
+          <input type="number" id="setPort" min="1024" max="65535" step="1" inputmode="numeric" placeholder="e.g. 8090" required>
+        </label>
+        <div class="smsg" id="setMsg" role="status" hidden></div>
+
+        <div class="sactions" id="setServerActions">
+          <button type="button" class="preset" id="setCheck">Check port</button>
+          <button type="button" class="primary" id="setApply">Apply and move</button>
+        </div>
+
+        <div class="sfile" id="setFileMode" hidden>
+          <p class="small">This page is open as a file, so there is no server to move. Start one on your port with:</p>
+          <div class="code"><pre id="setCmd"></pre></div>
+          <p class="small muted">If the port is busy, the start script asks for another one in the terminal.</p>
+        </div>
+
+        <ul class="small muted snotes">
+          <li>Ports 1024–65535. The new port is saved in <code>config.json</code> and used the next time the app starts.</li>
+          <li>Other machines need the port open in the firewall (Ubuntu: <code>sudo ufw allow &lt;port&gt;/tcp</code>).</li>
+          <li>Docker: change the host side of <code>ports:</code> in <code>docker-compose.yml</code> instead.</li>
+        </ul>
+      </div>
+    </form>
+  </dialog>
+<script src="data/models.js"></script>
+<script>
+const CAPS = [
+  { key: "coding", label: "Coding" },
+  { key: "agentic", label: "Agents & tools" },
+  { key: "reasoning", label: "Reasoning" },
+  { key: "multimodal", label: "Vision" },
+  { key: "knowledge", label: "Knowledge" },
+  { key: "math", label: "Math" },
+];
+const PRESETS = {
+  Balanced: { coding: 3, agentic: 3, reasoning: 3, multimodal: 2, knowledge: 2, math: 2 },
+  Coding:   { coding: 5, agentic: 4, reasoning: 2, multimodal: 0, knowledge: 1, math: 1 },
+  Agents:   { coding: 3, agentic: 5, reasoning: 3, multimodal: 1, knowledge: 1, math: 0 },
+  Research: { coding: 1, agentic: 2, reasoning: 5, multimodal: 1, knowledge: 4, math: 3 },
+  Vision:   { coding: 1, agentic: 2, reasoning: 2, multimodal: 5, knowledge: 2, math: 0 },
+};
+const VERDICTS = [
+  { min: 90, label: "Near-equivalent", cls: "v-eq" },
+  { min: 75, label: "Close", cls: "v-close" },
+  { min: 60, label: "Partial", cls: "v-part" },
+  { min: 0,  label: "Distant", cls: "v-far" },
+];
+const STALE_DAYS = 10;
+const LOAD_TIMEOUT_MS = 10000;
+
+const state = { models: [], meta: null, vendor: null, targetId: null, twinId: null,
+  weights: { ...PRESETS.Balanced }, preset: "Balanced", famPick: {} };
+
+const $ = (id) => document.getElementById(id);
+const el = (tag, attrs = {}, kids = []) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "text") { n.textContent = v; continue; }
+    if (k === "html") { n.innerHTML = v; continue; }
+    if (k.startsWith("on")) { n.addEventListener(k.slice(2), v); continue; }
+    n.setAttribute(k, v);
+  }
+  for (const c of [].concat(kids)) { if (c != null) n.append(c); }
+  return n;
+};
+const fmt = (x, d = 0) => (x == null || Number.isNaN(x)) ? "—" : Number(x).toFixed(d);
+
+/* ---------- scoring ---------- */
+function quantFactor(m) {
+  const q = (m.spark?.quant || "").toLowerCase();
+  if (/q2|2-bit|iq2/.test(q)) { return 0.88; }
+  if (/3-bit|q3/.test(q)) { return 0.93; }
+  if (/4-bit|q4|awq/.test(q)) { return 0.98; }
+  return 1.0; // NVFP4 / MXFP4 / FP8: vendor-native low precision
+}
+function overallOf(m) {
+  if (m.scores?.overall != null) { return m.scores.overall; }
+  const vals = CAPS.map(c => m.scores?.[c.key]).filter(v => v != null);
+  if (!vals.length) { return null; }
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+function localCap(F, L, key) {
+  const q = quantFactor(L);
+  if (key === "multimodal" && F.vision && !L.vision) { return { v: 0, kind: "missing" }; }
+  if (L.scores?.[key] != null) { return { v: L.scores[key] * q, kind: "measured" }; }
+  const fo = overallOf(F), lo = overallOf(L), fc = F.scores?.[key];
+  if (fo == null || lo == null || fc == null) { return null; }
+  return { v: lo * q * (fc / fo), kind: "imputed" };
+}
+function match(F, L, weights) {
+  let sum = 0, wsum = 0;
+  const rows = [];
+  for (const c of CAPS) {
+    const fv = F.scores?.[c.key];
+    const w = weights[c.key] || 0;
+    if (fv == null) { continue; }
+    const lc = localCap(F, L, c.key);
+    if (!lc) { continue; }
+    const ratio = Math.min(lc.v / fv, 1);
+    rows.push({ ...c, fv, lv: lc.v, kind: lc.kind, ratio, w });
+    if (w === 0) { continue; }
+    sum += ratio * w; wsum += w;
+  }
+  const fo = overallOf(F), lo = overallOf(L);
+  const parity = fo && lo ? Math.min((lo * quantFactor(L)) / fo, 1.2) * 100 : null;
+  // Target with no per-capability scores: fall back to overall parity
+  const pct = wsum ? (sum / wsum) * 100 : Math.min(parity ?? 0, 100);
+  return { pct, rows, parity };
+}
+const verdictOf = (p) => VERDICTS.find(v => p >= v.min);
+function tpsOf(m) {
+  const t = m.spark?.tps;
+  if (!t) { return null; }
+  return t.decode ?? t.code ?? t.prose ?? null;
+}
+
+/* ---------- data views ---------- */
+const frontier = () => state.models.filter(m => m.kind === "frontier");
+const famOf = (m) => m.family || m.name;
+function verCmp(a, b) {
+  // Newest first: release date, then dotted version number
+  const ra = a.released || "", rb = b.released || "";
+  const pa = String(a.version || "").match(/\d+(\.\d+)*/)?.[0].split(".").map(Number) || [];
+  const pb = String(b.version || "").match(/\d+(\.\d+)*/)?.[0].split(".").map(Number) || [];
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pb[i] || 0) - (pa[i] || 0);
+    if (d) { return d; }
+  }
+  return rb.localeCompare(ra);
+}
+function families(list) {
+  const map = new Map();
+  for (const m of list) { const f = famOf(m); if (!map.has(f)) { map.set(f, []); } map.get(f).push(m); }
+  for (const v of map.values()) { v.sort(verCmp); }
+  return map;
+}
+function latestIds(list) {
+  return new Set([...families(list).values()].map(v => v[0].id));
+}
+function candidates() {
+  const vis = $("fVision").checked, tight = $("fTight").checked;
+  const ctx = +$("fCtx").value, tps = +$("fTps").value;
+  const latestOnly = $("fVer").value === "latest", fam = $("fFam").value;
+  const locals = state.models.filter(m => m.kind === "local");
+  const newest = latestIds(locals);
+  return locals
+    .filter(m => !latestOnly || newest.has(m.id))
+    .filter(m => !$("fPlaybook").checked || (m.playbooks || []).length)
+    .filter(m => !fam || famOf(m) === fam)
+    .filter(m => tight || m.spark?.fit !== "tight")
+    .filter(m => !vis || m.vision)
+    .filter(m => (m.contextK || 0) >= ctx)
+    .filter(m => (tpsOf(m) || 0) >= tps);
+}
+function ranked(F) {
+  return candidates().map(L => ({ L, ...match(F, L, state.weights) })).sort((a, b) => b.pct - a.pct);
+}
+
+/* ---------- render: controls ---------- */
+function renderVendors() {
+  const vendors = [...new Set(frontier().map(m => m.vendor))];
+  if (!vendors.includes(state.vendor)) { state.vendor = vendors[0]; }
+  $("vendors").replaceChildren(...vendors.map(v => el("button", {
+    class: "vtab", "aria-pressed": String(v === state.vendor), text: v,
+    onclick: () => { state.vendor = v; renderVendors(); renderTargets(); } })));
+}
+function renderTargets() {
+  const fams = [...families(frontier().filter(m => m.vendor === state.vendor)).entries()]
+    .sort((a, b) => (overallOf(b[1][0]) || 0) - (overallOf(a[1][0]) || 0));
+  $("targets").replaceChildren(...fams.map(([fam, versions]) => {
+    const cur = versions.find(v => v.id === state.targetId) || versions.find(v => v.id === state.famPick[fam]) || versions[0];
+    const btn = el("button", { class: "target", "aria-pressed": String(cur.id === state.targetId), onclick: () => selectTarget(cur.id) }, [
+      el("span", {}, [el("div", { text: cur.name }), el("div", { class: "tier", text: `${cur.tier || ""}${cur.price ? " · " + cur.price : ""}` })]),
+      el("span", { class: "mono", text: fmt(overallOf(cur), 1) }),
+    ]);
+    if (versions.length < 2) { return el("div", { class: "fam" }, [btn, el("span")]); }
+    const sel = el("select", { class: "vsel", id: "ver-" + fam.replace(/\W+/g, "-"), "aria-label": fam + " version" },
+      versions.map(v => { const o = el("option", { value: v.id, text: "v" + (v.version || v.name) }); o.selected = v.id === cur.id; return o; }));
+    sel.addEventListener("change", () => { state.famPick[fam] = sel.value; selectTarget(sel.value); });
+    return el("div", { class: "fam" }, [btn, sel]);
+  }));
+}
+function renderFamFilter() {
+  const sel = $("fFam"), keep = sel.value;
+  const fams = [...families(state.models.filter(m => m.kind === "local")).keys()].sort();
+  sel.replaceChildren(el("option", { value: "", text: "All families" }), ...fams.map(f => el("option", { value: f, text: f })));
+  sel.value = fams.includes(keep) ? keep : "";
+}
+function renderPresets() {
+  $("presets").replaceChildren(...Object.keys(PRESETS).map(p => el("button", {
+    class: "preset", "aria-pressed": String(p === state.preset), text: p,
+    onclick: () => { state.preset = p; state.weights = { ...PRESETS[p] }; renderPresets(); renderSliders(); renderResults(); } })));
+}
+function renderSliders() {
+  $("sliders").replaceChildren(...CAPS.map(c => {
+    const out = el("span", { class: "mono", text: String(state.weights[c.key]) });
+    const share = el("span", { class: "share", id: "share-" + c.key });
+    const input = el("input", { type: "range", min: "0", max: "5", step: "1", id: "w-" + c.key,
+      value: String(state.weights[c.key]), "aria-label": c.label + " weight" });
+    input.addEventListener("input", () => {
+      state.weights[c.key] = +input.value; out.textContent = input.value;
+      state.preset = null; renderPresets(); renderResults(); renderExplain();
+    });
+    return el("div", { class: "slider", title: "Weight 0–5. Share = this weight ÷ sum of all weights." },
+      [el("span", { text: c.label }), input, out, share]);
+  }));
+  renderExplain();
+}
+
+// Explains the weights in words and shows each capability's share of the match score
+function renderExplain() {
+  const total = CAPS.reduce((a, c) => a + (state.weights[c.key] || 0), 0);
+  for (const c of CAPS) {
+    const n = $("share-" + c.key);
+    if (n) { n.textContent = total ? Math.round((state.weights[c.key] / total) * 100) + "%" : "0%"; }
+  }
+  const box = $("explain");
+  if (!box) { return; }
+  if (!total) { box.replaceChildren(el("p", { text: "All weights are 0. Raise at least one slider to score models." })); return; }
+  const sorted = CAPS.filter(c => state.weights[c.key] > 0).sort((a, b) => state.weights[b.key] - state.weights[a.key]);
+  const off = CAPS.filter(c => !state.weights[c.key]).map(c => c.label);
+  const top = sorted[0], low = sorted[sorted.length - 1];
+  const ratio = state.weights[top.key] / state.weights[low.key];
+  const F = state.models.find(m => m.id === state.targetId);
+  const best = F ? ranked(F)[0] : null;
+  box.replaceChildren(
+    el("p", { html: "<strong>What the sliders do.</strong> Each slider sets how much a capability counts in the match % (0 = ignore, 5 = most important). The % on the right is its share of the score." }),
+    el("p", { text: `Now: ${top.label} counts ${ratio === 1 ? "the same as" : fmt(ratio, ratio % 1 ? 1 : 0) + "× as much as"} ${low.label}.` + (off.length ? ` Ignored: ${off.join(", ")}.` : "") }),
+    el("p", { text: "Match % = Σ (weight × how close the local model gets on that capability, max 100%) ÷ Σ weights. Moving a slider re-ranks every model, the matrix and the closest twin instantly. Hardware filters are not affected." }),
+    best ? el("p", { html: `<strong>Result:</strong> best twin for ${F.name} is ${best.L.name} at ${fmt(best.pct)}%.` }) : null,
+  );
+}
+
+// Summary tiles under the header
+function renderKpis() {
+  const F = frontier(), locals = state.models.filter(m => m.kind === "local"), pend = state.models.filter(m => m.kind === "pending");
+  const pb = state.models.filter(m => (m.playbooks || []).length).length;
+  const T = state.models.find(m => m.id === state.targetId);
+  const best = T ? ranked(T)[0] : null;
+  const tiles = [
+    ["Frontier models", String(F.length), `${families(F).size} families, all versions`],
+    ["Spark-ready open models", String(locals.length + pend.length), `${locals.length} scored (ranked) · ${pend.length} pending (no scores yet)`],
+    ["NVIDIA playbook models", String(pb), "official DGX Spark recipes"],
+    ["Closest twin now", best ? fmt(best.pct) + "%" : "—", best ? `${best.L.name} vs ${T.name}` : ""],
+    ["Data updated", state.meta?.lastRefreshed || "—", state.meta?.dataAsOf ? "benchmarks as of " + state.meta.dataAsOf : ""],
+  ];
+  $("kpis").replaceChildren(...tiles.map(([k, v, sub]) => el("div", { class: "kpi" }, [el("div", { class: "k", text: k }), el("div", { class: "v", text: v }), el("div", { class: "s", text: sub })])));
+  $("kpis").hidden = false;
+}
+
+/* ---------- render: hero ---------- */
+function gauge(pct, cls) {
+  const r = 46, c = 2 * Math.PI * r, off = c * (1 - pct / 100);
+  const color = { "v-eq": "var(--good)", "v-close": "var(--accent)", "v-part": "var(--warn)", "v-far": "var(--bad)" }[cls];
+  return `<svg width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="Match ${fmt(pct)} percent">
+    <circle cx="60" cy="60" r="${r}" fill="none" stroke="var(--chip)" stroke-width="10"/>
+    <circle cx="60" cy="60" r="${r}" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round"
+      stroke-dasharray="${c}" stroke-dashoffset="${off}" transform="rotate(-90 60 60)"/>
+    <text x="60" y="58" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="24" font-weight="500" fill="var(--ink)">${fmt(pct)}%</text>
+    <text x="60" y="78" text-anchor="middle" font-size="10" fill="var(--muted)">capability match</text></svg>`;
+}
+function renderHero() {
+  const F = state.models.find(m => m.id === state.targetId);
+  const hero = $("hero");
+  if (!F) { hero.replaceChildren(el("p", { class: "muted", text: "Pick a frontier model to find its twin." })); return; }
+  const list = ranked(F);
+  if (!list.length) {
+    hero.replaceChildren(el("h2", { text: F.name }), el("p", { class: "muted", text: "No Spark-ready model meets these constraints. Loosen the speed, context or vision filters." }));
+    return;
+  }
+  const pick = list.find(r => r.L.id === state.twinId) || list[0];
+  state.twinId = pick.L.id;
+  const L = pick.L, v = verdictOf(pick.pct), isTop = pick === list[0];
+
+  const vs = el("div", { class: "vs" }, [
+    el("div", { class: "side f" }, [el("div", { class: "label", text: "You pay for" }), el("div", { class: "name", text: F.name }),
+      el("div", { class: "small muted", text: `${F.vendor} · ${F.contextK >= 1000 ? (F.contextK / 1000).toFixed(F.contextK % 1000 ? 2 : 0) + "M" : F.contextK + "K"} context · ${F.price || "—"}` })]),
+    el("div", { class: "gauge arrow", html: gauge(pick.pct, v.cls) }),
+    el("div", { class: "side l" }, [el("div", { class: "label", text: isTop ? "Closest local twin" : "Selected local model" }), el("div", { class: "name", text: L.name }),
+      el("div", { class: "small muted", text: `${L.vendor} · ${L.paramsTotal ?? "?"}B${L.paramsActive && L.paramsActive !== L.paramsTotal ? " / " + L.paramsActive + "B active" : " dense"} · open weights` })]),
+  ]);
+
+  const head = el("div", { style: "display:flex;flex-wrap:wrap;gap:8px;align-items:center" }, [
+    el("span", { class: "verdict " + v.cls, text: v.label }),
+    el("span", { class: "small muted", text: pick.parity != null ? `Overall score parity ${fmt(pick.parity)}% (quant-adjusted)` : "" }),
+  ]);
+
+  const bars = el("div", { class: "bars" }, pick.rows.map(r => {
+    const lw = Math.max(0, Math.min(100, r.lv));
+    const d = r.lv - r.fv;
+    const dcls = r.ratio >= 0.9 ? "pos" : r.ratio >= 0.7 ? "mid" : "neg";
+    const lcls = "bar-l" + (r.kind === "imputed" ? " imputed" : r.kind === "missing" ? " missing" : "");
+    return el("div", { class: "bar-row", title: `${r.label}: frontier ${fmt(r.fv, 1)}, local ${fmt(r.lv, 1)} (${r.kind})${r.w === 0 ? " · weight 0" : ""}` }, [
+      el("span", { text: r.label + (r.w === 0 ? " ·" : "") }),
+      el("div", { class: "bar-track" }, [el("div", { class: "bar-f", style: `width:${Math.min(100, r.fv)}%` }), el("div", { class: lcls, style: `width:${lw}%` })]),
+      el("span", { class: "delta " + dcls, text: r.kind === "missing" ? "no vision" : (d >= 0 ? "+" : "") + fmt(d, 1) }),
+    ]);
+  }));
+  const legend = el("div", { class: "legend", html:
+    `<span><span class="sw" style="background:var(--frontier)"></span>${F.name}</span>
+     <span><span class="sw" style="background:var(--accent)"></span>${L.name} (measured)</span>
+     <span><span class="sw" style="background:repeating-linear-gradient(135deg,var(--accent) 0 3px,transparent 3px 5px);border:1px solid var(--accent)"></span>estimated from overall score</span>` });
+
+  const sp = L.spark || {};
+  const tps = tpsOf(L);
+  const facts = el("div", { class: "facts" }, [
+    ["Fit", sp.fit === "tight" ? "Tight" : "Comfortable"],
+    ["Quantization", sp.quant || "—"],
+    ["Memory", sp.memGB ? `~${fmt(sp.memGB)} GB of 119` : "—"],
+    ["Decode speed", tps ? `${fmt(tps, 1)} tok/s${sp.tpsSource === "estimated" ? " (est.)" : ""}` : "—"],
+    ["Context", L.contextK ? (L.contextK >= 1000 ? "1M" : L.contextK + "K") : "—"],
+    ["Runtime", sp.runtime || "—"],
+  ].map(([k, val]) => el("div", { class: "fact" }, [el("div", { class: "k", text: k }), el("div", { class: "v", text: val })])));
+
+  const gaps = pick.rows.filter(r => r.w > 0).sort((a, b) => a.ratio - b.ratio);
+  const notes = el("ul", { class: "notes" }, [
+    ...gaps.slice(0, 2).filter(r => r.ratio < 0.9).map(r => el("li", { class: "gap",
+      text: r.kind === "missing" ? `${F.name} reads images; ${L.name} is text-only.` : `${r.label}: reaches ${fmt(r.ratio * 100)}% of ${F.name}${r.kind === "imputed" ? " (estimated)" : ""}.` })),
+    ...gaps.filter(r => r.ratio >= 0.9).slice(0, 2).map(r => el("li", { class: "ok", text: `${r.label}: on par (${fmt(r.ratio * 100)}%).` })),
+    F.contextK > (L.contextK || 0) ? el("li", { class: "gap", text: `Context ${L.contextK >= 1000 ? "1M" : L.contextK + "K"} vs ${F.contextK >= 1000 ? "1M" : F.contextK + "K"}.` }) : null,
+    L.bestFor ? el("li", { text: "Best for: " + L.bestFor }) : null,
+    L.notes ? el("li", { class: "muted", text: L.notes }) : null,
+  ]);
+
+  const alt = list.slice(0, 4).filter(r => r.L.id !== L.id).slice(0, 3);
+  const alts = el("div", { class: "small" }, [el("span", { class: "muted", text: "Also consider: " }),
+    ...alt.flatMap((r, i) => [el("button", { class: "preset", text: `${r.L.name} ${fmt(r.pct)}%`, onclick: () => { state.twinId = r.L.id; renderResults(); } }), i < alt.length - 1 ? " " : ""])]);
+
+  // Other versions of the twin's family, scored against the same target
+  const sibs = families(state.models.filter(m => m.kind === "local")).get(famOf(L)) || [];
+  const twinVer = sibs.length > 1 ? el("div", { class: "twinver" }, [el("span", { class: "muted", text: famOf(L) + " versions: " }),
+    ...sibs.map(m => el("button", { class: "preset", "aria-pressed": String(m.id === L.id),
+      text: `v${m.version || m.name} ${fmt(match(F, m, state.weights).pct)}%`, onclick: () => { state.twinId = m.id; renderResults(); } }))]) : null;
+  hero.replaceChildren(...[vs, head, el("h3", { text: "Capability by capability" }), bars, legend, facts, notes, twinVer, alts, deployPanel(L)].filter(Boolean));
+}
+
+/* ---------- deploy commands (adapted from NVIDIA DGX Spark playbooks) ---------- */
+const IMG = {
+  vllm: "nvcr.io/nvidia/vllm:26.05.post1-py3",
+  sglang: "lmsysorg/sglang:latest-cu130",
+  trtllm: "nvcr.io/nvidia/tensorrt-llm/release:1.3.0rc13",
+  webui: "ghcr.io/open-webui/open-webui:ollama",
+};
+const MAX_LEN_CAP = 131072; // keeps KV cache inside 119 GB for most models; raise if memory allows
+const HF_PLACEHOLDER = "<HF_MODEL_HANDLE>";
+const BS = "\\";
+function maxLen(m) { return Math.min((m.contextK || 128) * 1024, MAX_LEN_CAP); }
+function testCurl(port, model) {
+  return [
+    `curl http://localhost:${port}/v1/chat/completions ${BS}`,
+    `  -H "Content-Type: application/json" ${BS}`,
+    `  -d '{"model": "${model}", "messages": [{"role": "user", "content": "Hello from my DGX Spark"}], "max_tokens": 200}'`,
+  ].join("\n");
+}
+function deployRecipes(m) {
+  const d = m.deploy || {};
+  const hf = d.hf || HF_PLACEHOLDER;
+  const pb = new Set((m.playbooks || []).map(p => p.name));
+  const fp4 = /nvfp4|fp4/i.test(hf + (m.spark?.quant || ""));
+  const name = "ft-" + m.id;
+  const out = [];
+
+  out.push({ key: "vLLM", playbook: pb.has("vLLM"), text: [
+    "# 1. Hugging Face token (https://huggingface.co/settings/tokens)",
+    "export HF_TOKEN=<your_hf_token>",
+    `export VLLM_IMAGE=${d.image || IMG.vllm}`,
+    "docker pull $VLLM_IMAGE",
+    "",
+    `# 2. Serve ${m.name} on port 8000 (OpenAI-compatible)`,
+    `docker run -d --name ${name} --gpus all --ipc=host -p 8000:8000 ${BS}`,
+    `  -e HF_TOKEN=$HF_TOKEN ${BS}`,
+    `  -v ~/.cache/huggingface:/root/.cache/huggingface ${BS}`,
+    `  $VLLM_IMAGE ${BS}`,
+    // vllm/vllm-openai images already use `vllm serve` as entrypoint
+    `  ${/^vllm\/vllm-openai/.test(d.image || "") ? "" : "vllm serve "}${hf} ${BS}`,
+    `    --max-model-len ${maxLen(m)} --gpu-memory-utilization 0.85` + (d.vllmArgs ? ` ${BS}\n    ${d.vllmArgs}` : ""),
+    "",
+    "# 3. Wait for it, then test",
+    "timeout 900 bash -c 'until curl -sf http://localhost:8000/health >/dev/null; do sleep 10; done'",
+    testCurl(8000, hf),
+  ].join("\n") });
+
+  out.push({ key: "SGLang", playbook: pb.has("SGLang"), text: [
+    "export HF_TOKEN=<your_hf_token>",
+    `export SGLANG_IMAGE=${IMG.sglang}`,
+    "docker pull $SGLANG_IMAGE",
+    "",
+    `docker run -d --name ${name} --gpus all --ipc=host -p 30000:30000 ${BS}`,
+    `  -e HF_TOKEN=$HF_TOKEN ${BS}`,
+    `  -v ~/.cache/huggingface:/root/.cache/huggingface ${BS}`,
+    `  $SGLANG_IMAGE ${BS}`,
+    `  python3 -m sglang.launch_server --model-path ${hf} ${BS}`,
+    `    --host 0.0.0.0 --port 30000 --trust-remote-code --tp 1 ${BS}`,
+    `    --attention-backend flashinfer --mem-fraction-static 0.75` + (fp4 ? ` ${BS}\n    --quantization modelopt_fp4` : ""),
+    "",
+    "timeout 900 bash -c 'until curl -sf http://localhost:30000/health >/dev/null; do sleep 5; done'",
+    testCurl(30000, hf),
+  ].join("\n") });
+
+  out.push({ key: "TRT-LLM", playbook: pb.has("TRT-LLM"), text: [
+    "export HF_TOKEN=<your_hf_token>",
+    `export DOCKER_IMAGE=${IMG.trtllm}`,
+    `export MODEL_HANDLE=${hf}`,
+    "",
+    `docker run --name ${name} --rm -d --gpus all --ipc host --network host ${BS}`,
+    `  -e HF_TOKEN=$HF_TOKEN -e MODEL_HANDLE="$MODEL_HANDLE" ${BS}`,
+    `  -v $HOME/.cache/huggingface/:/root/.cache/huggingface/ ${BS}`,
+    `  $DOCKER_IMAGE ${BS}`,
+    "  bash -c '",
+    `    hf download $MODEL_HANDLE && ${BS}`,
+    "    cat > /tmp/extra-llm-api-config.yml <<CFG",
+    "print_iter_log: false",
+    "kv_cache_config:",
+    '  dtype: "auto"',
+    "  free_gpu_memory_fraction: 0.9",
+    "cuda_graph_config:",
+    "  enable_padding: true",
+    "disable_overlap_scheduler: true",
+    "CFG",
+    `    trtllm-serve "$MODEL_HANDLE" --max_batch_size 64 --trust_remote_code ${BS}`,
+    "      --port 8355 --extra_llm_api_options /tmp/extra-llm-api-config.yml'",
+    "",
+    testCurl(8355, hf),
+  ].join("\n") });
+
+  if (d.gguf) {
+    out.push({ key: "llama.cpp", playbook: pb.has("llama.cpp"), text: [
+      "# One-time build (CUDA, Blackwell GB10)",
+      "sudo apt update && sudo apt install -y git clang cmake libcurl4-openssl-dev libssl-dev",
+      "git clone https://github.com/ggml-org/llama.cpp ~/llama.cpp && cd ~/llama.cpp",
+      "cmake -B build -DGGML_NATIVE=ON -DGGML_CUDA=ON -DGGML_CURL=ON -DCMAKE_CUDA_ARCHITECTURES=121a-real",
+      "cmake --build build --config Release --target llama-server -j",
+      "",
+      `# Serve ${m.name}`,
+      `./build/bin/llama-server -hf ${d.gguf} ${BS}`,
+      `  --host 0.0.0.0 --port 30000 -c ${maxLen(m)} -ngl 999`,
+      "",
+      testCurl(30000, d.gguf),
+    ].join("\n") });
+  }
+  if (d.ollama) {
+    out.push({ key: "Ollama", playbook: pb.has("Ollama") || pb.has("Open WebUI"), text: [
+      "curl -fsSL https://ollama.com/install.sh | sh",
+      `ollama pull ${d.ollama}`,
+      `ollama run ${d.ollama} "Hello from my DGX Spark"`,
+      "",
+      "# API (port 11434)",
+      `curl http://localhost:11434/api/chat -d '{"model": "${d.ollama}", "messages": [{"role": "user", "content": "Hello"}], "stream": false}'`,
+    ].join("\n") });
+  }
+  if (d.nim) {
+    out.push({ key: "NIM", playbook: pb.has("NIM"), text: [
+      "# NGC key: https://org.ngc.nvidia.com/setup/api-key",
+      "export NGC_API_KEY=<your_ngc_api_key>",
+      "echo \"$NGC_API_KEY\" | docker login nvcr.io --username '$oauthtoken' --password-stdin",
+      "mkdir -p ~/.cache/nim ~/.local/share/nim/workspace && chmod -R a+w ~/.cache/nim ~/.local/share/nim/workspace",
+      "",
+      `docker run -d --name ${name} --gpus all --shm-size=16GB ${BS}`,
+      `  -e NGC_API_KEY=$NGC_API_KEY ${BS}`,
+      `  -v ~/.cache/nim:/opt/nim/.cache -v ~/.local/share/nim/workspace:/opt/nim/workspace ${BS}`,
+      `  -p 8000:8000 ${d.nim}`,
+    ].join("\n") });
+  }
+  const ui = [
+    "# Open WebUI in front of the vLLM server (open http://<spark-ip>:3000)",
+    `docker run -d --name open-webui --restart always -p 3000:8080 ${BS}`,
+    `  -e OPENAI_API_BASE_URL=http://host.docker.internal:8000/v1 ${BS}`,
+    `  --add-host=host.docker.internal:host-gateway ${BS}`,
+    `  -v open-webui:/app/backend/data ${BS}`,
+    "  ghcr.io/open-webui/open-webui:main",
+  ];
+  if (d.ollama) {
+    ui.push("", `# Or all-in-one with bundled Ollama (NVIDIA playbook); pick "${d.ollama}" in the UI`,
+      `docker run -d -p 8080:8080 --gpus=all -v open-webui:/app/backend/data ${BS}`,
+      `  -v open-webui-ollama:/root/.ollama --name open-webui-ollama ${IMG.webui}`);
+  }
+  out.push({ key: "Chat UI", playbook: pb.has("Open WebUI"), text: ui.join("\n") });
+
+  // Playbook-backed runtimes first
+  return out.sort((a, b) => Number(b.playbook) - Number(a.playbook));
+}
+function deployPanel(m) {
+  const d = m.deploy || {};
+  const box = el("div", { class: "deploy" });
+  const pbs = m.playbooks || [];
+  box.append(el("div", { style: "display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between" }, [
+    el("h3", { text: "Deploy on your DGX Spark" }),
+    pbs.length
+      ? el("span", {}, pbs.flatMap((p, i) => [el("a", { class: "badge", href: p.url, target: "_blank", rel: "noopener", text: "NVIDIA playbook: " + p.name }), i < pbs.length - 1 ? " " : ""]))
+      : el("span", { class: "badge warn", text: "No NVIDIA playbook: community recipe" }),
+  ]));
+  if (d.note) { box.append(el("p", { class: "small muted", style: "margin:0", text: d.note })); return box; }
+  const verified = new Set(d.verified || []);
+  const handle = d.hf || d.gguf;
+  box.append(el("p", { class: "small muted", style: "margin:0" }, [
+    "Model handle: ", el("code", { text: handle || HF_PLACEHOLDER }), " ",
+    handle && (verified.has("hf") || verified.has("gguf"))
+      ? el("span", { class: "badge", text: "confirmed" })
+      : el("a", { href: "https://huggingface.co/models?search=" + encodeURIComponent(m.name.replace(/\s*\(.*\)/, "")), target: "_blank", rel: "noopener", text: "verify on Hugging Face" }),
+  ]));
+  const recipes = deployRecipes(m);
+  const code = el("div", { class: "code" });
+  const tabs = el("div", { class: "rtabs" });
+  const show = (r) => {
+    tabs.querySelectorAll(".rtab").forEach(t => t.setAttribute("aria-pressed", String(t.dataset.k === r.key)));
+    const pre = el("pre", { text: r.text });
+    const btn = el("button", { class: "copy", text: "Copy" });
+    btn.addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(r.text); btn.textContent = "Copied"; }
+      catch (e) {
+        const sel = getSelection(), rg = document.createRange();
+        rg.selectNodeContents(pre); sel.removeAllRanges(); sel.addRange(rg);
+        btn.textContent = "Selected: press Ctrl+C";
+      }
+      setTimeout(() => { btn.textContent = "Copy"; }, 1800);
+    });
+    code.replaceChildren(btn, pre);
+  };
+  for (const r of recipes) {
+    const t = el("button", { class: "rtab", "data-k": r.key }, [r.key, r.playbook ? el("span", { class: "pb", text: " ✓" }) : null]);
+    t.addEventListener("click", () => show(r));
+    tabs.append(t);
+  }
+  box.append(tabs, code, el("p", { class: "small muted", style: "margin:0",
+    text: "✓ = an official NVIDIA DGX Spark playbook covers this model on that runtime. Commands follow the playbooks (vLLM 26.05, TRT-LLM 1.3.0rc13, SGLang cu130); container tags change, so check the playbook page for the newest." }));
+  show(recipes[0]);
+  return box;
+}
+
+/* ---------- render: table ---------- */
+function renderRank() {
+  const F = state.models.find(m => m.id === state.targetId);
+  if (!F) { $("rank").replaceChildren(); return; }
+  $("rankTitle").textContent = `All Spark-ready models vs ${F.name}`;
+  const list = ranked(F);
+  const thead = el("thead", {}, el("tr", {}, ["Model", "Match", "Verdict", "Overall", "Fit", "Quant", "Memory", "tok/s", "Context", "Vision", "NVIDIA playbook"]
+    .map((h, i) => el("th", { class: [1, 3, 6, 7, 8].includes(i) ? "num" : "", text: h }))));
+  const rows = list.map(r => {
+    const L = r.L, v = verdictOf(r.pct), sp = L.spark || {}, t = tpsOf(L);
+    return el("tr", { class: L.id === state.twinId ? "sel" : "", onclick: () => { state.twinId = L.id; renderResults(); window.scrollTo({ top: 0, behavior: "smooth" }); } }, [
+      el("td", {}, [el("div", { text: L.name }), el("div", { class: "small muted", text: L.vendor })]),
+      el("td", { class: "num", html: `<span class="mbar" style="width:${Math.round(r.pct * 0.6)}px"></span>${fmt(r.pct)}%` }),
+      el("td", {}, el("span", { class: "verdict " + v.cls, text: v.label })),
+      el("td", { class: "num", text: fmt(overallOf(L), 1) }),
+      el("td", {}, el("span", { class: "fit " + (sp.fit || "native"), text: sp.fit === "tight" ? "tight" : "fits" })),
+      el("td", { class: "small", text: sp.quant || "—" }),
+      el("td", { class: "num", text: sp.memGB ? fmt(sp.memGB) + " GB" : "—" }),
+      el("td", { class: "num", html: t ? `${fmt(t, 0)}${sp.tpsSource === "estimated" ? ' <span class="est">est.</span>' : ""}` : "—" }),
+      el("td", { class: "num", text: L.contextK ? (L.contextK >= 1000 ? "1M" : L.contextK + "K") : "—" }),
+      el("td", { text: L.vision ? "Yes" : "—" }),
+      el("td", {}, (L.playbooks || []).length ? el("span", { class: "badge", text: L.playbooks.map(p => p.name).join(" · ") }) : el("span", { class: "muted", text: "—" })),
+    ]);
+  });
+  $("rank").replaceChildren(thead, el("tbody", {}, rows));
+}
+
+/* ---------- render: matrix ---------- */
+function heat(p) {
+  // Single-hue ramp: stronger accent = closer match
+  const t = Math.max(0, Math.min(1, (p - 20) / 80));
+  return `background: color-mix(in srgb, var(--accent) ${Math.round(6 + t * 64)}%, transparent)` + (t > 0.62 ? ";color:#fff" : "");
+}
+function renderMatrix() {
+  const Fs = frontier().sort((a, b) => (overallOf(b) || 0) - (overallOf(a) || 0));
+  const Ls = candidates().sort((a, b) => (overallOf(b) || 0) - (overallOf(a) || 0));
+  const open = (F, L) => { state.vendor = F.vendor; state.twinId = L.id; selectTarget(F.id, true); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const thead = el("thead", {}, el("tr", {}, [el("th", { class: "row", text: "" }), ...Ls.map(L => el("th", { text: L.name })),
+    el("th", { style: "writing-mode:horizontal-tb;transform:none;vertical-align:bottom", text: "Best twin" })]));
+  const body = Fs.map(F => {
+    const scores = Ls.map(L => match(F, L, state.weights).pct);
+    const bi = scores.indexOf(Math.max(...scores));
+    return el("tr", {}, [el("th", { class: "row", text: F.name }),
+      ...Ls.map((L, i) => el("td", { class: i === bi ? "best" : "", style: heat(scores[i]), title: `${L.name} vs ${F.name}: ${fmt(scores[i])}%`,
+        onclick: () => open(F, L), text: fmt(scores[i]) })),
+      Ls.length ? el("td", { class: "bestcol", onclick: () => open(F, Ls[bi]) }, [el("span", { text: Ls[bi].name + " " }), el("span", { class: "verdict " + verdictOf(scores[bi]).cls, text: fmt(scores[bi]) + "%" })]) : null,
+    ]);
+  });
+  $("matrix").replaceChildren(thead, el("tbody", {}, body));
+}
+
+/* ---------- render: backlog + log ---------- */
+function renderPending() {
+  const P = state.models.filter(m => m.kind === "pending");
+  $("pending").replaceChildren(...(P.length ? P.map(m => el("div", { class: "card" }, [
+    el("div", { style: "display:flex;justify-content:space-between;gap:8px" }, [el("strong", { text: m.name }), el("span", { class: "mono small", text: tpsOf(m) ? fmt(tpsOf(m), 0) + " tok/s" : "" })]),
+    el("div", { class: "small muted", text: `${m.spark?.quant || ""}${m.spark?.memGB ? " · ~" + fmt(m.spark.memGB) + " GB" : ""} · ${m.spark?.runtime || ""}` }),
+    el("div", { class: "small", text: m.bestFor || "" }),
+    (m.playbooks || []).length ? el("div", {}, el("span", { class: "badge", text: "NVIDIA playbook: " + m.playbooks.map(p => p.name).join(" · ") })) : null,
+    (() => {
+      const d = el("details", {}, [el("summary", { text: "Deploy commands" })]);
+      d.addEventListener("toggle", () => { if (d.open && d.children.length === 1) { d.append(deployPanel(m)); } });
+      return d;
+    })(),
+  ].filter(Boolean))) : [el("p", { class: "muted small", text: "Nothing waiting." })]));
+}
+function renderLog() {
+  const items = (state.meta?.changelog || []).slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 12);
+  $("log").replaceChildren(...items.map(c => el("li", {}, [el("span", { class: "mono muted", text: c.date }), el("span", { text: c.text })])));
+  // One link per site (first URL seen for that host)
+  const byHost = new Map();
+  for (const u of state.models.flatMap(m => m.sources || [])) {
+    try { const h = new URL(u).hostname.replace(/^www\./, ""); if (!byHost.has(h)) { byHost.set(h, u); } } catch (e) { /* skip bad URL */ }
+  }
+  const srcs = [...byHost.entries()];
+  $("sources").replaceChildren(el("strong", { text: "Sources. " }),
+    ...srcs.flatMap(([h, u], i) => [el("a", { href: u, target: "_blank", rel: "noopener", text: h }), i < srcs.length - 1 ? " · " : ""]));
+}
+function renderStatus() {
+  const m = state.meta;
+  if (!m) { return; }
+  const age = (Date.now() - new Date(m.lastRefreshed).getTime()) / 864e5;
+  $("liveDot").className = "dot " + (age > STALE_DAYS ? "stale" : "live");
+  $("liveText").textContent = `Live · data ${m.lastRefreshed}`;
+  $("liveText").parentElement.title = `Refresh: ${m.cadence || "weekly"}`;
+  if (state.models.length) { renderKpis(); }
+}
+
+function renderResults() { renderHero(); renderRank(); renderMatrix(); renderKpis(); renderExplain(); }
+function selectTarget(id, keepTwin = false) {
+  state.targetId = id;
+  if (!keepTwin) { state.twinId = null; }
+  try { history.replaceState(null, "", "#" + id); } catch (e) { /* hash optional */ }
+  renderTargets(); renderResults();
+}
+function renderAll() {
+  if (!state.models.length) { return; }
+  $("empty").hidden = true; $("app").hidden = false;
+  const fromHash = location.hash.slice(1);
+  const F = frontier();
+  if (!state.targetId || !F.some(m => m.id === state.targetId)) {
+    state.targetId = F.some(m => m.id === fromHash) ? fromHash : (F.find(m => m.id === "claude-opus-5-5") || F[0])?.id;
+  }
+  state.vendor = F.find(m => m.id === state.targetId)?.vendor || state.vendor;
+  renderFamFilter(); renderVendors(); renderTargets(); renderPresets(); renderSliders(); renderResults(); renderPending(); renderLog(); renderStatus();
+}
+
+["fVision", "fTight", "fCtx", "fTps", "fVer", "fFam", "fPlaybook"].forEach(id => $(id).addEventListener("change", () => { renderResults(); }));
+window.addEventListener("hashchange", () => {
+  const id = location.hash.slice(1);
+  if (id && id !== state.targetId && frontier().some(m => m.id === id)) { state.vendor = null; selectTarget(id); renderVendors(); }
+});
+
+/* ---------- help + manual refresh ---------- */
+const TOAST_MS = 3500;
+let toastTimer = null;
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, TOAST_MS);
+}
+function showTopic(id) {
+  $("helpNav").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.t === id)));
+  document.querySelectorAll(".help-content section").forEach(sec => { sec.hidden = sec.id !== id; });
+}
+function openHelp(topic) {
+  const d = $("help");
+  $("aboutPhoto").src = document.querySelector(".credit img").src;
+  $("aboutVer").textContent = $("buildInfo").textContent + (state.meta?.lastRefreshed ? " · data " + state.meta.lastRefreshed : "");
+  if (topic) { showTopic(topic); }
+  if (typeof d.showModal === "function") { d.showModal(); } else { d.setAttribute("open", ""); }
+}
+$("helpNav").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { showTopic(b.dataset.t); } });
+$("btnHelp").addEventListener("click", () => openHelp());
+$("methodHelp").addEventListener("click", () => openHelp("h-weights"));
+$("helpClose").addEventListener("click", () => $("help").close());
+$("help").addEventListener("click", (e) => { if (e.target === $("help")) { $("help").close(); } });
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "?" || /input|select|textarea/i.test(e.target.tagName)) { return; }
+  openHelp();
+});
+
+// Manual refresh: each data loader sets window.ftRefresh
+$("btnRefresh").addEventListener("click", async () => {
+  const b = $("btnRefresh");
+  if (b.classList.contains("spin")) { return; }
+  b.classList.add("spin");
+  try {
+    const msg = window.ftRefresh ? await window.ftRefresh() : "Refresh is not available in this view.";
+    toast(msg);
+  } catch (e) {
+    toast("Refresh failed: " + (e.message || e.code || e));
+  } finally {
+    b.classList.remove("spin");
+  }
+});
+
+/* FrontierTwin · Developer: Subramoniam AB (SAB) */
+/* ---------- live data: polls data/models.json; file:// uses data/models.js ---------- */
+const POLL_MS = 60000;
+let lastStamp = null;
+
+function applyData(d, via) {
+  if (!d || !Array.isArray(d.models)) { return; }
+  const stamp = JSON.stringify(d.meta || {}) + d.models.map(m => m.id + (m.updated || "")).join();
+  if (stamp === lastStamp) { return; }
+  lastStamp = stamp;
+  state.models = d.models;
+  state.meta = d.meta || null;
+  renderAll();
+  if (via === "file") {
+    $("liveText").textContent = `Offline file · data ${d.meta?.lastRefreshed || ""}`;
+    $("liveText").parentElement.title = "Opened as a file: no auto-refresh. Run 'python3 ft.py serve' for live updates.";
+  }
+}
+
+async function poll() {
+  try {
+    const r = await fetch("data/models.json?t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) { throw new Error("HTTP " + r.status); }
+    applyData(await r.json(), "http");
+  } catch (e) {
+    // Server unreachable: keep what is on screen, else fall back to the bundled copy
+    if (!state.models.length) { applyData(window.FT_DATA, "file"); }
+  }
+}
+
+// Manual refresh button: server rebuilds the catalog, then the page re-reads it
+window.ftRefresh = async () => {
+  if (location.protocol === "file:") { location.reload(); return "Reloading…"; }
+  const r = await fetch("api/refresh", { method: "POST" });
+  const j = await r.json().catch(() => ({}));
+  lastStamp = null;
+  await poll();
+  if (!r.ok || !j.ok) { return j.message || "Server refresh unavailable; data reloaded from disk."; }
+  return j.message;
+};
+
+if (location.protocol === "file:") {
+  applyData(window.FT_DATA, "file");
+} else {
+  poll();
+  setInterval(poll, POLL_MS);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { poll(); } });
+  fetch("api/version").then(r => r.ok ? r.json() : null).then(v => {
+    if (v && $("appVer")) { $("appVer").textContent = `server ${v.version} · data ${v.dataAsOf || ""}`; }
+  }).catch(() => {});
+}
+
+/* ---------- settings: move the server to another port (self-hosted only) ---------- */
+const MIN_PORT = 1024;
+const MAX_PORT = 65535;
+const REDIRECT_MS = 1500;
+const IS_FILE = location.protocol === "file:";
+
+function setMsg(kind, text) {
+  const m = $("setMsg");
+  m.className = "smsg " + kind;   // ok | err | info
+  m.textContent = text;
+  m.hidden = !text;
+}
+
+function readPort() {
+  const n = Number($("setPort").value);
+  if (!Number.isInteger(n) || n < MIN_PORT || n > MAX_PORT) {
+    setMsg("err", `Enter a whole number from ${MIN_PORT} to ${MAX_PORT}.`);
+    $("setPort").focus();
+    return null;
+  }
+  return n;
+}
+
+function fileCmd() {
+  const p = $("setPort").value || "8090";
+  $("setCmd").textContent =
+    `# Ubuntu / DGX OS / macOS\n./start.sh --port ${p}\n\n# Windows\nstart.bat --port ${p}\n\n# Any\npython3 ft.py serve --port ${p}`;
+}
+
+async function openSettings() {
+  setMsg("", "");
+  $("setFileMode").hidden = !IS_FILE;
+  $("setServerActions").hidden = IS_FILE;
+  if (IS_FILE) {
+    $("setNow").textContent = "Offline file mode: no server is running.";
+    fileCmd();
+  } else {
+    try {
+      const s = await (await fetch("api/settings", { cache: "no-store" })).json();
+      $("setNow").textContent = `Running on port ${s.port} (host ${s.host}). Saved default: ${s.configPort}.`;
+      $("setPort").value = "";
+    } catch (e) {
+      $("setNow").textContent = `Running on port ${location.port || "80"}.`;
+    }
+  }
+  $("settings").showModal();
+  $("setPort").focus();
+}
+
+async function checkPort() {
+  const port = readPort();
+  if (port === null) { return null; }
+  setMsg("info", `Checking port ${port}…`);
+  const r = await (await fetch(`api/port-check?port=${port}`, { cache: "no-store" })).json();
+  if (!r.ok) { setMsg("err", r.message); return null; }
+  if (r.current) { setMsg("ok", `Already running on port ${port}.`); return null; }
+  if (r.free) { setMsg("ok", `Port ${port} is free. Click "Apply and move".`); return port; }
+  setMsg("err", `Port ${port} is in use. Enter a different port${r.suggest ? ` (for example ${r.suggest})` : ""}.`);
+  if (r.suggest) { $("setPort").value = r.suggest; }
+  $("setPort").select();
+  return null;
+}
+
+async function applyPort() {
+  const port = readPort();
+  if (port === null) { return; }
+  setMsg("info", `Starting on port ${port}…`);
+  let r;
+  try {
+    r = await (await fetch("api/port", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ port }) })).json();
+  } catch (e) {
+    setMsg("err", "The server did not answer. Check the terminal where FrontierTwin runs.");
+    return;
+  }
+  if (!r.ok) {
+    setMsg("err", r.message + (r.suggest ? ` Suggested free port: ${r.suggest}.` : ""));
+    if (r.suggest) { $("setPort").value = r.suggest; }
+    $("setPort").select();
+    return;
+  }
+  if (Number(location.port || 80) === port) { setMsg("ok", r.message); return; }
+  setMsg("ok", r.message + " Opening the new address…");
+  const url = new URL(location.href);
+  url.port = String(port);
+  setTimeout(() => { location.href = url.toString(); }, REDIRECT_MS);
+}
+
+$("btnSettings").addEventListener("click", openSettings);
+$("setClose").addEventListener("click", () => $("settings").close());
+$("setCheck").addEventListener("click", () => checkPort().catch(e => setMsg("err", "Check failed: " + e.message)));
+$("setApply").addEventListener("click", () => applyPort());
+$("setPort").addEventListener("input", () => { setMsg("", ""); if (IS_FILE) { fileCmd(); } });
+$("setForm").addEventListener("submit", (e) => { e.preventDefault(); if (!IS_FILE) { applyPort(); } });
+$("settings").addEventListener("click", (e) => { if (e.target === $("settings")) { $("settings").close(); } });
+</script>
+
+</body>
+</html>
